@@ -1,0 +1,1 @@
+#define CooperFryeSampler_INPUT_FOLDER "${PROJECT_SOURCE_DIR}/input"
