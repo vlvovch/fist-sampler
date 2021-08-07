@@ -1,5 +1,9 @@
 project(CooperFryeSampler)
 
+cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+
+set (CMAKE_CXX_STANDARD 11)
+
 #include_directories ("${PROJECT_SOURCE_DIR}/include" "${PROJECT_BINARY_DIR}/include")
 
 if(NOT TARGET ThermalFIST)

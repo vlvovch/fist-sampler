@@ -12,7 +12,7 @@
 
 namespace CooperFryeSampler {
 
-  void ReadParticlizationHypersurface(const std::string& hypersurface_filename, thermalfist::ParticlizationHypersurface& hypersurface, int binary_file_mode = 0) {
+  static void ReadParticlizationHypersurface(const std::string& hypersurface_filename, thermalfist::ParticlizationHypersurface& hypersurface, int binary_file_mode = 0) {
     if (binary_file_mode) {
       // get file size
       std::function<long(std::string)> GetFileSize = [](std::string filename) {
@@ -74,23 +74,28 @@ namespace CooperFryeSampler {
     }
   }
 
-  void WriteHypersurfaceToBinaryFile(const thermalfist::ParticlizationHypersurface& hypersurface, const std::string& filename) {
+  static void WriteHypersurfaceToBinaryFile(const thermalfist::ParticlizationHypersurface& hypersurface, const std::string& filename) {
     std::ofstream fout(filename, std::ios::out | std::ios::binary);
     fout.write(reinterpret_cast<const char*>(&hypersurface[0]), hypersurface.size() * sizeof(thermalfist::ParticlizationHypersurfaceElement));
     fout.close();
   }
 
-  void ConvertFreezeoutHypersurface(const std::string& hypersurface_filename, const std::string& hypersurface_filename_binary) {
+  static void ConvertFreezeoutHypersurface(const std::string& hypersurface_filename, const std::string& hypersurface_filename_binary) {
     thermalfist::ParticlizationHypersurface hypersurface;
     ReadParticlizationHypersurface(hypersurface_filename, hypersurface, 0);
     std::cout << hypersurface.size() << " ";
     WriteHypersurfaceToBinaryFile(hypersurface, hypersurface_filename_binary);
   }
 
-  void ReadParticlizationHypersurfaceMUSIC(const std::string& hypersurface_filename, 
+  static void ReadParticlizationHypersurfaceMUSIC(const std::string& hypersurface_filename, 
     thermalfist::ParticlizationHypersurface& hypersurface
     ) {
     std::ifstream fin(hypersurface_filename, std::ios::binary);
+
+    if (!fin.is_open()) {
+      std::cout << "Hypersurface file " << hypersurface_filename << " not found!" << std::endl;
+      return;
+    }
 
     hypersurface.clear();
 

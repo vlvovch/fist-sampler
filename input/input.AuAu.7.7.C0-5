@@ -50,9 +50,9 @@ hypersurface_filetype 2  # 0 - FIST ascii, 1 - FIST binary, 2 - MUSIC binary
 
 
 # The file name with the particlization hypersurface (absolute or relative path)
-hypersurface_file hydro/AuAu7.7/C0-5/surface_eps0.26.dat
+hypersurface_file hydro/AuAu.7.7/C0-5/surface_eps_0.26.dat
 
 
 # The output file name for the generated events (absolute or relative path)
-output_file AuAu7.7.0005.events.dat
+output_file AuAu.7.7.C0-5.events.dat
 

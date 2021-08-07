@@ -40,25 +40,7 @@ int main(int argc, char* argv[]) {
     run_parameters.ReadParametersFromFile(fileinput);
   }
 
-  run_parameters.nevents = 1000;
-  run_parameters.parameters["output_format"] = 0;
-  run_parameters.parameters["Bcanonical"] = 1;
-  run_parameters.parameters["Qcanonical"] = 0;
-  run_parameters.parameters["Scanonical"] = 0;
-  run_parameters.parameters["Ccanonical"] = 0;
-  run_parameters.parameters["decays"] = 4;
-
-  //hypersurface_file =
-  //  "C:\\Users\\volodya\\Documents\\Programming\\ResearchWork\\thirdparty\\ChunHydro\\RHIC200\\hydro_results_C0-5\\surface_eps_0.5.dat";
-  //hypersurface_file =
-  //  "C:\\Users\\volodya\\Documents\\Programming\\ResearchWork\\thirdparty\\ChunHydro\\RHIC19_6\\hydro_results_C0-5\\surface_eps_0.26.dat";
-  run_parameters.hypersurface_file =
-    "C:\\Users\\volodya\\Documents\\Programming\\ResearchWork\\thirdparty\\ChunHydro\\RHIC7_7\\hydro_results_C0-5\\surface_eps_0.26.dat";
-  run_parameters.hypersurface_file =
-    "C:\\Users\\volodya\\Documents\\Programming\\ResearchWork\\thirdparty\\ChunHydro\\RHIC7_7\\hydro_results_C70-80\\surface_eps_0.26.dat";
-  run_parameters.hypersurface_file = std::string(CooperFryeSampler_INPUT_FOLDER) + "/hydro/AuAu7.7/C70-80/surface_eps_0.26.dat";
-  //hypersurface_file =
-  //  "C:\\Users\\volodya\\Documents\\Programming\\ResearchWork\\thirdparty\\ChunHydro\\RHIC7_7\\hydro_results_C0-10\\surface_eps_0.26.dat";
+  //run_parameters.hypersurface_file = std::string(CooperFryeSampler_INPUT_FOLDER) + "/hydro/AuAu7.7/C70-80/surface_eps_0.26.dat";
 
 
   if (argc > 2) {
