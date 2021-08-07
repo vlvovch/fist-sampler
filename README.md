@@ -12,7 +12,7 @@ The sampling procedure first determines the numbers of each hadrons species to b
 
 The description of the sampling procedure can be found in Appendix B of a paper [https://arxiv.org/abs/2107.00163](https://arxiv.org/abs/2107.00163)
 
-Currently the sampling is restricted to the model of ideal hadron resonance gas and does incorporate viscous corrections.
+Currently the sampling is restricted to the model of ideal hadron resonance gas and does not incorporate viscous corrections.
 
 ## Prerequisites
 
