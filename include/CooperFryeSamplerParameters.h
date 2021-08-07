@@ -38,8 +38,8 @@ namespace CooperFryeSampler {
     CooperFryeSamplerParameters(const std::string& input_file = "") :
       nevents(1000),
       randomseed(1),
-      output_file("AuAu7.7.0005.events.dat"),
-      hypersurface_file("surface_eps0.26.dat"),
+      output_file("AuAu.7.7.0005.events.dat"),
+      hypersurface_file("surface_eps_0.26.dat"),
       particle_list_file(""),
       decays_list_file(""),
       parameters({
@@ -70,34 +70,40 @@ namespace CooperFryeSampler {
             continue;
           }
 
-          std::cout << "Reading input parameter " << var << std::endl;
+          std::cout << "Reading input parameter " << var << " = ";
 
           if (var == "output_file") {
             fin >> output_file;
+            std::cout << output_file << std::endl;
             continue;
           }
 
           if (var == "randomseed") {
             fin >> randomseed;
+            std::cout << randomseed << std::endl;
             continue;
           }
 
           if (var == "hypersurface_file") {
             fin >> hypersurface_file;
+            std::cout << hypersurface_file << std::endl;
             continue;
           }
 
           if (var == "particle_list_file") {
-            fin >> hypersurface_file;
+            fin >> particle_list_file;
+            std::cout << particle_list_file << std::endl;
             continue;
           }
 
           if (var == "decays_list_file") {
-            fin >> hypersurface_file;
+            fin >> decays_list_file;
+            std::cout << decays_list_file << std::endl;
             continue;
           }
 
           fin >> val;
+          std::cout << val << std::endl;
 
           if (var == "nevents") {
             nevents = round(val);

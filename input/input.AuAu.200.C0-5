@@ -46,7 +46,10 @@ decays 4
 
 
 # Hypersurface file format
-hypersurface_filetype 2  # 0 - FIST ascii, 1 - FIST binary, 2 - MUSIC binary
+# 0 - FIST ascii
+# 1 - FIST binary
+# 2 - MUSIC binary
+hypersurface_filetype 2  
 
 
 # The file name with the particlization hypersurface (absolute or relative path)
