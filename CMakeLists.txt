@@ -20,7 +20,7 @@ configure_file (
 include_directories ("${PROJECT_SOURCE_DIR}/include" 
   "${PROJECT_BINARY_DIR}/include")
 
-add_executable (CooperFryeSampler CooperFryeSampler.cxx include/HypersurfaceReader.h include/CooperFryeSamplerParameters.h  include/CooperFryeSamplerHelperFunctions.h)
+add_executable (CooperFryeSampler CooperFryeSampler.cpp include/HypersurfaceReader.h include/CooperFryeSamplerParameters.h  include/CooperFryeSamplerHelperFunctions.h)
 #target_link_libraries (CooperFryeSampler ThermalFIST ThermalFISTExtended sample_statistics)
 target_link_libraries (CooperFryeSampler ThermalFIST)
 set_property(TARGET CooperFryeSampler PROPERTY FOLDER "research/CooperFryeSampler")
