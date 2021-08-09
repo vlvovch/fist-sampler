@@ -8,7 +8,7 @@ The sampler uses a particlization hypersurface produced in hydro simulations (su
 
 A distinctive feature of the sampler is the ability to selectively incorporate the exact (the canonical ensemble) global conservation of conserved charges, such as baryon number, electric charge, strangeness, and charm.
 
-The sampling procedure first determines the numbers of each hadrons species to be sampled in a given event, and then the momentum of each hadrons is sampled independently from other hadrons. This is different from the more convential Cooper-Frye sampling and allows one to sample the events with the canonical treatment of conserved charges considerably faster. The downside is that the routine requires a considerable amount of memory, in practive about ~5-10 GB for central Au-Au collisions.
+The sampling procedure first determines the numbers of each hadrons species to be sampled in a given event, and then the momentum of each hadrons is sampled independently from other hadrons. This is different from the more conventional Cooper-Frye sampling and allows one to sample the events with the canonical treatment of conserved charges considerably faster. The downside is that the routine requires a considerable amount of memory, in practice about ~5-15 GB for central Au-Au collisions.
 
 The description of the sampling procedure can be found in Appendix B of a paper [https://arxiv.org/abs/2107.00163](https://arxiv.org/abs/2107.00163)
 
@@ -16,15 +16,15 @@ Currently the sampling is restricted to the model of ideal hadron resonance gas 
 
 ## Prerequisites
 
-A compiler with C++11 support. 
+- A compiler with C++11 support. 
 
-CMake v3.1+.
+- CMake v3.1+.
 
 ## Building
 
 For a Linux system:
 ```bash
-# Clone the repository fetching the submodule
+# Clone the repository fetching the submodule(s)
 git clone --recurse-submodules https://github.com/vlvovch/CooperFryeSampler.git
 
 # Create the build directory and build the project
@@ -51,7 +51,7 @@ To download the MUSIC hypersurfaces corresponding to 0-5% Au-Au collisions at va
 ```bash
 bash ../input/get_MUSIC_input_RHICBES.sh 
 ```
-from the build directory. This will take ~1.5GB of space. Note that this requires the [gdown](https://github.com/wkentaro/gdown) package to be installed. 
+from the build directory. This will take ~1.5GB of space, this space can be reduced by omitting collision energies that are not needed. Note that the script requires the [gdown](https://github.com/wkentaro/gdown) package to be installed. If this does not work, just download the files from Google Drive manually.
 
 Then, to sample Au-Au collisions at 7.7 GeV run
 ```bash
@@ -70,6 +70,6 @@ as well as the paper
 
 describing the sampling procedure. 
 
-In addition, if third-party input is used (such as particle list or hypersurface of particlization), please cite the relevant literature.
+In addition, if third-party input is used (such as the particle list or hypersurface of particlization), please cite the relevant literature.
 
 *Copyright (C) 2021 Volodymyr Vovchenko*
