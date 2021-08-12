@@ -24,3 +24,7 @@ add_executable (CooperFryeSampler CooperFryeSampler.cpp include/HypersurfaceRead
 #target_link_libraries (CooperFryeSampler ThermalFIST ThermalFISTExtended sample_statistics)
 target_link_libraries (CooperFryeSampler ThermalFIST)
 set_property(TARGET CooperFryeSampler PROPERTY FOLDER "research/CooperFryeSampler")
+
+add_executable (FreezeoutMap tasks/FreezeoutMap.cpp)
+target_link_libraries (FreezeoutMap ThermalFIST)
+set_property(TARGET FreezeoutMap PROPERTY FOLDER "research/CooperFryeSampler")

@@ -179,6 +179,19 @@ namespace CooperFryeSampler {
     configMC.CanonicalQ = (lround(run_parameters.parameters["Qcanonical"]) != 0);
     configMC.CanonicalS = (lround(run_parameters.parameters["Scanonical"]) != 0);
     configMC.CanonicalC = (lround(run_parameters.parameters["Ccanonical"]) != 0);
+
+    if (run_parameters.parameters.count("gammaq")) {
+      configMC.CFOParameters.gammaq = run_parameters.parameters["gammaq"];
+    }
+
+    if (run_parameters.parameters.count("gammaS")) {
+      configMC.CFOParameters.gammaS = run_parameters.parameters["gammaS"];
+    }
+
+    if (run_parameters.parameters.count("gammaC")) {
+      configMC.CFOParameters.gammaC = run_parameters.parameters["gammaC"];
+    }
+
     thermalfist::HypersurfaceEventGenerator* evtgen = new thermalfist::HypersurfaceEventGenerator(
       TPS, configMC, &hypersurface);
     return evtgen;
