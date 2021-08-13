@@ -28,6 +28,7 @@ For a Linux system:
 git clone --recurse-submodules https://github.com/vlvovch/CooperFryeSampler.git
 
 # Create the build directory and build the project
+cd CooperFryeSampler
 mkdir build
 cd build
 cmake ../
