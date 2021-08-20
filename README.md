@@ -10,7 +10,7 @@ A distinctive feature of the sampler is the ability to selectively incorporate t
 
 The sampling procedure first determines the numbers of each hadrons species to be sampled in a given event, and then the momentum of each hadrons is sampled independently from other hadrons. This is different from the more conventional Cooper-Frye sampling and allows one to sample the events with the canonical treatment of conserved charges considerably faster. The downside is that the routine requires a considerable amount of memory, in practice about ~5-15 GB for central Au-Au collisions.
 
-The description of the sampling procedure can be found in Appendix B of a paper [https://arxiv.org/abs/2107.00163](https://arxiv.org/abs/2107.00163)
+The description of the sampling procedure can be found in Appendix B of the paper [https://arxiv.org/abs/2107.00163](https://arxiv.org/abs/2107.00163)
 
 Currently the sampling is restricted to the model of ideal hadron resonance gas and does not incorporate viscous corrections.
 
@@ -46,7 +46,7 @@ Here `input-file` contains the parameters for the sampling.
 
 See [input/input.AuAu.7.7.C0-5](input/input.AuAu.7.7.C0-5) for a sample input corresponding to 0-5% central Au-Au collisions, which includes the description of all the relevant parameters.
 
-The sampler requires a input file with the particlization hypersurface. One of the supported formats is the binary output from MUSIC.
+The sampler requires an input file with the particlization hypersurface. One of the supported formats is the binary output from MUSIC.
 Such hypersurfaces are available [here](https://drive.google.com/drive/folders/1DMml4IXXcilEZaaTpGF2HM_2ICmeydpz?usp=sharing), based on a paper [https://arxiv.org/abs/2003.05852](https://arxiv.org/abs/2003.05852).
 To download the MUSIC hypersurfaces corresponding to 0-5% Au-Au collisions at various RHIC-BES energies run e.g.
 ```bash
