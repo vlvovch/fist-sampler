@@ -64,6 +64,7 @@ int main(int argc, char* argv[]) {
 
   cout << "Initializing event generator..." << "\n";
   HypersurfaceEventGenerator* evtgen = CreateEventGenerator(run_parameters, hypersurface);
+  evtgen->CheckSetParameters();
   cout << "Initialization complete!" << "\n";
 
   // Pointer to the particle list

@@ -58,3 +58,9 @@ hypersurface_file hydro/AuAu.200/C0-5/surface_eps_0.26.dat
 
 # The output file name for the generated events (absolute or relative path)
 output_file AuAu.200.C0-5.events.dat
+
+# The output format
+# 0 - FIST ascii
+# 1 - output tailored for UrQMD afterburner at https://github.com/jbernhard/urqmd-afterburner
+# Any other value -- no output
+output_format 0
