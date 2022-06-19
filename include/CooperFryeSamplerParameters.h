@@ -43,14 +43,20 @@ namespace CooperFryeSampler {
       particle_list_file(""),
       decays_list_file(""),
       parameters({
-        {"Bcanonical",           1}, // the global baryon number is grand-canonical (0) or canonical (1) 
-        {"Qcanonical",           0}, // the global electric charge is grand-canonical (0) or canonical (1) 
-        {"Scanonical",           0}, // the global strangeness is grand-canonical (0) or canonical (1) 
-        {"Ccanonical",           0}, // the global charm is grand-canonical (0) or canonical (1) 
-        {"finite_widths",        0}, // Resonance widths treatment: 0 - zero width, 1 - energy-dependent Breit-Wigner
-        {"hypersurface_filetype",2}, // 0 - Native ascii, 1 - Native binary, 2 - MUSIC binary
-        {"decays", 1},               // 0 - no decays, 1 - use the stability flags from the list, 2 - strong decays, 3 - strong + electromagnetic, 4 - strong + electromagnetic + weak decays (pi-K-p in the final state), 10 - match particle list from UrQMD
-        {"output_format", 0}         // 0 - native ascii, 1 - tailored for UrQMD afterburner at https://github.com/jbernhard/urqmd-afterburner
+        {"Bcanonical",           1},   // the global baryon number is grand-canonical (0) or canonical (1) 
+        {"Qcanonical",           0},   // the global electric charge is grand-canonical (0) or canonical (1) 
+        {"Scanonical",           0},   // the global strangeness is grand-canonical (0) or canonical (1) 
+        {"Ccanonical",           0},   // the global charm is grand-canonical (0) or canonical (1) 
+        {"finite_widths",        0},   // Resonance widths treatment: 0 - zero width, 1 - energy-dependent Breit-Wigner
+        {"hypersurface_filetype",2},   // 0 - Native ascii, 1 - Native binary, 2 - MUSIC binary
+        {"decays", 1},                 // 0 - no decays, 1 - use the stability flags from the list, 2 - strong decays, 3 - strong + electromagnetic, 4 - strong + electromagnetic + weak decays (pi-K-p in the final state), 10 - match the particle list from UrQMD
+        {"output_format", 0},          // 0 - native ascii, 1 - tailored for UrQMD afterburner at https://github.com/jbernhard/urqmd-afterburner
+        {"b",     0.},                 // Excluded volume parameter for baryons (in fm^3)
+        {"radB", -1.},                 // Baryon hard-core radius (in fm). If negative (default), its value is inferred from excluded-volume parameter b
+        {"rescaleTmu", 0},             // Rescale the values of T and mu to match energy and baryon densities from hydro, most relevant when EV-HRG model used, less so for Id-HRG. Note that the hypersurface MUST correspond to constant energy density of edens
+        {"edens",   0.26},             // The energy density corresponding to the Cooper-Frye hypersurface
+        {"use_idealHRG_for_means", 0}, // Use the ideal HRG model when evaluating mean hadron yields, faster initialization at moderate accuracy cost
+        {"EVfastmode", 1}              // Use (or not) the fast mode when checking the hard-core overlap of particles. If on, keeps sampling the given particle until no overlap with other particles achieved, instead of rejecting all sampled particles and starting over.
         })
     {
       if (input_file != "")

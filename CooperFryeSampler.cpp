@@ -30,7 +30,6 @@ using namespace thermalfist;
 using namespace CooperFryeSampler;
 
 
-
 int main(int argc, char* argv[]) {
 
   CooperFryeSamplerParameters run_parameters;

@@ -9,6 +9,7 @@
 #include "CooperFryeSamplerParameters.h"
 #include "HypersurfaceReader.h"
 #include "HRGEventGenerator/HypersurfaceSampler.h"
+#include "HRGEV/ExcludedVolumeHelper.h"
 
 namespace CooperFryeSampler {
 
@@ -192,8 +193,41 @@ namespace CooperFryeSampler {
       configMC.CFOParameters.gammaC = run_parameters.parameters["gammaC"];
     }
 
-    thermalfist::HypersurfaceEventGenerator* evtgen = new thermalfist::HypersurfaceEventGenerator(
+    // Excluded volume for baryons
+    double b = run_parameters.parameters["b"];
+    if (b > 0.0 && lround(run_parameters.parameters["use_idealHRG_for_means"]) == 0) {
+      configMC.fModelType = thermalfist::EventGeneratorConfiguration::QvdW;
+    }
+
+    configMC.bij = std::vector<std::vector<double> >(TPS->ComponentsNumber(), std::vector<double>(TPS->ComponentsNumber(), 0.));
+    for (int i = 0; i < TPS->ComponentsNumber(); ++i) {
+      for (int j = 0; j < TPS->ComponentsNumber(); ++j) {
+        if (TPS->Particle(i).BaryonCharge() * TPS->Particle(j).BaryonCharge() == 1) {
+          configMC.bij[i][j] = b;
+        }
+        else {
+          configMC.bij[i][j] = 0.;
+        }
+      }
+    }
+
+    thermalfist::HypersurfaceEventGenerator* evtgen;
+    if (b == 0.0)
+      evtgen = new thermalfist::HypersurfaceEventGenerator(
       TPS, configMC, &hypersurface);
+    else {
+      evtgen = new thermalfist::HypersurfaceEventGeneratorEVHRG(
+        TPS, configMC, &hypersurface);
+      static_cast<thermalfist::HypersurfaceEventGeneratorEVHRG*>(evtgen)->SetExcludedVolume(b);
+      double radB = run_parameters.parameters["radB"];
+      if (radB < 0.0)
+        radB = thermalfist::CuteHRGHelper::rv(b);
+      static_cast<thermalfist::HypersurfaceEventGeneratorEVHRG*>(evtgen)->SetBaryonRadius(radB);
+    }
+
+    evtgen->SetRescaleTmu((lround(run_parameters.parameters["rescaleTmu"]) != 0), run_parameters.parameters["edens"]);
+    evtgen->SetEVFastMode((lround(run_parameters.parameters["EVfastmode"]) != 0));
+
     return evtgen;
   }
 
