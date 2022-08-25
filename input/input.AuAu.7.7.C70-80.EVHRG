@@ -1,5 +1,5 @@
 # Input parameters for the FIST sampler using particlization hypersurface for Au-Au 7.7 GeV collision from MUSIC
-# Uses EV-HRG model
+# Includes the effect of baryon excluded volume in the sampling procedure
 # Format: <parameter-name> <parameter-value>
 # Everything after # is ignored
 
@@ -57,19 +57,11 @@ hypersurface_filetype 2
 
 
 # The file name with the particlization hypersurface (absolute or relative path)
-hypersurface_file hydro/AuAu.7.7/C0-5/surface_eps_0.26.dat
-
-# Whether to recalculate T and \mu along the hypersurface to match energy and baryon density from hydro
-# This part is particularly relevant for EV-HRG because T and \mu were originally computed in MUSIC assuming ideal HRG
-# It is imperative that the Cooper-Frye corresponds to constant energy density of edens (see the next parameter)
-rescaleTmu 1
-
-# The value of energy density corresponding to the Cooper-Frye particlization hypersurface from MUSIC (in GeV/fm^3)
-edens 0.26
+hypersurface_file hydro/AuAu.7.7/C70-80/surface_eps_0.26.dat
 
 
 # The output file name for the generated events (absolute or relative path)
-output_file AuAu.7.7.C0-5.events.dat
+output_file AuAu.7.7.C70-80.EVHRG.events.dat
 
 # The output format
 # 0 - FIST ascii
@@ -77,3 +69,30 @@ output_file AuAu.7.7.C0-5.events.dat
 # Any other value -- no output
 output_format 0
 
+# Excluded volume related part
+
+# Excluded volume parameter (in fm^3)
+b 1.0
+
+# Baryon hard-core radius (in fm)
+# If negative (default), its value is inferred from b as r = (3 * b / (16 \pi))^{1/3}
+radB -1.0
+
+# Whether to recalculate T and \mu along the hypersurface to match energy abd baryon density from hydro
+# This part is relevant for EV-HRG because T and \mu were originally computed in MUSIC assuming ideal HRG
+# It is imperative that the Cooper-Frye corresponds to constant energy density of edens (see the next parameter)
+rescaleTmu 1
+
+# The value of energy density corresponding to the Cooper-Frye particlization hypersurface from MUSIC (in GeV/fm^3)
+edens 0.26
+
+# One can use ideal HRG to calculate the mean hadron yields at the first step
+# This can speed-up the initialization part at small accuracy cost
+use_idealHRG_for_means 0
+
+# Use (or not) the fast mode when checking the hard-core overlap of particles. 
+# If on, keeps sampling the given particle until no overlap with other particles achieved.
+# Otherwise, in case of an overlap, all of the already sampled particles are rejected and one starts over.
+# The fast mode appears to be very accurate compared to the full method, and currently it is needed for
+# the sampling of (semi-)central collisions where the full method is prohibitively expensive.
+EVfastmode 1

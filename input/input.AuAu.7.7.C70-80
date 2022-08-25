@@ -1,5 +1,4 @@
 # Input parameters for the FIST sampler using particlization hypersurface for Au-Au 7.7 GeV collision from MUSIC
-# Uses EV-HRG model
 # Format: <parameter-name> <parameter-value>
 # Everything after # is ignored
 
@@ -57,7 +56,7 @@ hypersurface_filetype 2
 
 
 # The file name with the particlization hypersurface (absolute or relative path)
-hypersurface_file hydro/AuAu.7.7/C0-5/surface_eps_0.26.dat
+hypersurface_file hydro/AuAu.7.7/C70-80/surface_eps_0.26.dat
 
 # Whether to recalculate T and \mu along the hypersurface to match energy and baryon density from hydro
 # This part is particularly relevant for EV-HRG because T and \mu were originally computed in MUSIC assuming ideal HRG
@@ -67,13 +66,11 @@ rescaleTmu 1
 # The value of energy density corresponding to the Cooper-Frye particlization hypersurface from MUSIC (in GeV/fm^3)
 edens 0.26
 
-
 # The output file name for the generated events (absolute or relative path)
-output_file AuAu.7.7.C0-5.events.dat
+output_file AuAu.7.7.C70-80.events.dat
 
 # The output format
 # 0 - FIST ascii
 # 1 - output tailored for UrQMD afterburner at https://github.com/jbernhard/urqmd-afterburner
 # Any other value -- no output
 output_format 0
-

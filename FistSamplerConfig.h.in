@@ -1,0 +1,4 @@
+#define FistSampler_INPUT_FOLDER "${PROJECT_SOURCE_DIR}/input"
+
+#define FistSampler_VERSION_MAJOR @FistSampler_VERSION_MAJOR@
+#define FistSampler_VERSION_MINOR @FistSampler_VERSION_MINOR@

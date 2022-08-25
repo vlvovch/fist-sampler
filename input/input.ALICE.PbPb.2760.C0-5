@@ -1,10 +1,9 @@
-# Input parameters for the FIST sampler using particlization hypersurface for Au-Au 7.7 GeV collision from MUSIC
-# Uses EV-HRG model
+# Input parameters for the FIST sampler utilizing the blast-wave model for 2.76 TeV Pb-Pb collision at the LHC
 # Format: <parameter-name> <parameter-value>
 # Everything after # is ignored
 
 # The format of the Cooper-Frye hypersurface
-fist_sampler_mode 0   # 0 - Coarse-grained from file, 1 - Siemens-Rasmussen-Hubble, 2 - boost-invariant blast-wave
+fist_sampler_mode 2   # 0 - Coarse-grained from file, 1 - Siemens-Rasmussen-Hubble, 2 - boost-invariant blast-wave
 
 # The number of events
 nevents 10000
@@ -46,34 +45,29 @@ finite_widths 0 # 0 - zero-width, 1 - eBW (const BR) (energy-dependent Breit-Wig
 # 3 - strong + electromagnetic decays
 # 4 - strong + electromagnetic + weak decays (charged pions and kaons remain stable)
 # 10 - decay only those resonances that are no recognized by UrQMD
-decays 4 
+decays 3 
 
 
-# Hypersurface file format
-# 0 - FIST ascii
-# 1 - FIST binary
-# 2 - MUSIC binary
-hypersurface_filetype 2  
+# Chemical freeze-out parameters
+T   0.160  # Temperature in GeV
+muB 0.000  # Baryon chemical potential in GeV
+muQ 0.000  # Electric charge chemical potential in GeV
+muS 0.000  # Strangeness chemical potential in GeV
+muC 0.000  # Charm chemical potential in GeV
+dVdy 4000. # Volume at mid-rapidity [fm^3]
 
-
-# The file name with the particlization hypersurface (absolute or relative path)
-hypersurface_file hydro/AuAu.7.7/C0-5/surface_eps_0.26.dat
-
-# Whether to recalculate T and \mu along the hypersurface to match energy and baryon density from hydro
-# This part is particularly relevant for EV-HRG because T and \mu were originally computed in MUSIC assuming ideal HRG
-# It is imperative that the Cooper-Frye corresponds to constant energy density of edens (see the next parameter)
-rescaleTmu 1
-
-# The value of energy density corresponding to the Cooper-Frye particlization hypersurface from MUSIC (in GeV/fm^3)
-edens 0.26
-
+# Blast-wave model parameters
+BW_Tkin   0.160 # Kinetic freeze-out temperature [GeV]
+BW_rmax   9.0   # Transverse radius [fm]
+BW_betaS  0.77  # Radial flow surface velocity
+BW_n      0.36  # Radial flow profile
+BW_etamax 4.8   # Space-time rapidity cut-off
 
 # The output file name for the generated events (absolute or relative path)
-output_file AuAu.7.7.C0-5.events.dat
+output_file PbPb.2760.C0-5.events.dat
 
 # The output format
 # 0 - FIST ascii
 # 1 - output tailored for UrQMD afterburner at https://github.com/jbernhard/urqmd-afterburner
 # Any other value -- no output
 output_format 0
-

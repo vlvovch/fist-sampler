@@ -16,10 +16,11 @@
 #include "ThermalFISTConfig.h"
 
 #include "include/HypersurfaceReader.h"
-#include "include/CooperFryeSamplerParameters.h"
-#include "include/CooperFryeSamplerHelperFunctions.h"
+#include "include/FistSamplerParameters.h"
+#include "include/FistSamplerHelperFunctions.h"
 
-#include "CooperFryeSamplerConfig.h"
+#include "FistSamplerConfig.h"
+
 
 using namespace std;
 
@@ -27,19 +28,28 @@ using namespace std;
 using namespace thermalfist;
 #endif
 
-using namespace CooperFryeSampler;
+using namespace FistSampler;
 
 
 int main(int argc, char* argv[]) {
 
-  CooperFryeSamplerParameters run_parameters;
+  cout << "Running FIST sampler version " << FistSampler_VERSION_MAJOR << "." << FistSampler_VERSION_MINOR << endl << endl;
+
+  FistSamplerParameters run_parameters;
+
+
+  string fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.ALICE.PbPb.2760.C0-5.EVHRG";
+  //fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.AuAu.7.7.C0-5.EVHRG";
+  //fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.HADES.AuAu.2.4.C0-5.EVHRG";
+  //fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.AuAu.7.7.C70-80.EVHRG";
 
   if (argc > 1) {
     string fileinput = string(argv[1]);
     run_parameters.ReadParametersFromFile(fileinput);
   }
 
-  //run_parameters.hypersurface_file = std::string(CooperFryeSampler_INPUT_FOLDER) + "/hydro/AuAu7.7/C70-80/surface_eps_0.26.dat";
+  run_parameters.ReadParametersFromFile(fileinput);
+  //run_parameters.hypersurface_file = std::string(FistSampler_INPUT_FOLDER) + "/hydro/AuAu7.7/C70-80/surface_eps_0.26.dat";
 
 
   if (argc > 2) {
@@ -52,18 +62,40 @@ int main(int argc, char* argv[]) {
   // Set the random seed
   RandomGenerators::SetSeed(run_parameters.randomseed);
 
-  // Read the Cooper-Frye hypersurface from file
-  ParticlizationHypersurface hypersurface;
-  ReadHypersurfaceFromFile(run_parameters, hypersurface);
-
-  // Check if the hypersurface is non-empty
-  if (hypersurface.size() == 0) {
-    std::cout << "Empty hypersurface! Aborting..." << "\n";
+  int fist_sampler_mode = lround(run_parameters.parameters["fist_sampler_mode"]);
+  if (fist_sampler_mode < 0 || fist_sampler_mode > 2) {
+    std::cout << "fist_sampler_mode of " << fist_sampler_mode << " is unsupported! " << "Aborting..." << "\n";
     exit(1);
   }
 
+  // Cooper-Frye hypersurface. Not used for fist_sampler_mode == 2 (blast-wave)
+  ParticlizationHypersurface hypersurface;
+
+  if (fist_sampler_mode == 0) {
+    // Read the Cooper-Frye hypersurface from file
+    ReadHypersurfaceFromFile(run_parameters, hypersurface);
+
+    // Check if the hypersurface is non-empty
+    if (hypersurface.size() == 0) {
+      std::cout << "Empty hypersurface! Aborting..." << "\n";
+      exit(1);
+    }
+  }
+  else if (fist_sampler_mode == 1) {
+    // Create a Siemens-Rasmussen-Hubble hypersurface based on parameters provided in run_parameters
+    CreateSiemensRasmussenHubbleHypersurface(run_parameters, hypersurface);
+  }
+
+
   cout << "Initializing event generator..." << "\n";
-  HypersurfaceEventGenerator* evtgen = CreateEventGenerator(run_parameters, hypersurface);
+  EventGeneratorBase* evtgen;
+  
+  if (fist_sampler_mode == 0 || fist_sampler_mode == 1) {
+    evtgen = CreateEventGeneratorFromHypersurface(run_parameters, hypersurface);
+  } 
+  else if (fist_sampler_mode == 2) {
+    evtgen = CreateBlastWaveEventGenerator(run_parameters);
+  }
   evtgen->CheckSetParameters();
   cout << "Initialization complete!" << "\n";
 
@@ -84,6 +116,7 @@ int main(int argc, char* argv[]) {
 
   cout << "\n";
   cout << "Sampling " << run_parameters.nevents << " events..." << endl;
+
 
   // Loop through the events
   for (long long event_number = 0; event_number < run_parameters.nevents; ++event_number) {

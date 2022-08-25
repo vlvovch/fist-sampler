@@ -1,5 +1,5 @@
-#ifndef COOPERFRYE_SAMPLER_PARAMETERS_H
-#define COOPERFRYE_SAMPLER_PARAMETERS_H
+#ifndef FIST_SAMPLER_PARAMETERS_H
+#define FIST_SAMPLER_PARAMETERS_H
 
 #include <fstream>
 #include <string>
@@ -10,9 +10,9 @@
 #include <sys/stat.h>
 #endif
 
-namespace CooperFryeSampler {
+namespace FistSampler {
 
-  struct CooperFryeSamplerParameters {
+  struct FistSamplerParameters {
     // Number of events to generate
     long long nevents;
 
@@ -35,7 +35,7 @@ namespace CooperFryeSampler {
     std::map<std::string, double> parameters;
 
     // Default constructor with the default values
-    CooperFryeSamplerParameters(const std::string& input_file = "") :
+    FistSamplerParameters(const std::string& input_file = "") :
       nevents(1000),
       randomseed(1),
       output_file("AuAu.7.7.0005.events.dat"),
@@ -43,6 +43,7 @@ namespace CooperFryeSampler {
       particle_list_file(""),
       decays_list_file(""),
       parameters({
+        {"mode",                 0},   // 0 - Hypersurface from a file, 1 - Siemens-Rasmussen with Hubble-like flow, 2 - longitudinally boost-invariant blast-wave model
         {"Bcanonical",           1},   // the global baryon number is grand-canonical (0) or canonical (1) 
         {"Qcanonical",           0},   // the global electric charge is grand-canonical (0) or canonical (1) 
         {"Scanonical",           0},   // the global strangeness is grand-canonical (0) or canonical (1) 
@@ -56,7 +57,7 @@ namespace CooperFryeSampler {
         {"rescaleTmu", 0},             // Rescale the values of T and mu to match energy and baryon densities from hydro, most relevant when EV-HRG model used, less so for Id-HRG. Note that the hypersurface MUST correspond to constant energy density of edens
         {"edens",   0.26},             // The energy density corresponding to the Cooper-Frye hypersurface
         {"use_idealHRG_for_means", 0}, // Use the ideal HRG model when evaluating mean hadron yields, faster initialization at moderate accuracy cost
-        {"EVfastmode", 1}              // Use (or not) the fast mode when checking the hard-core overlap of particles. If on, keeps sampling the given particle until no overlap with other particles achieved, instead of rejecting all sampled particles and starting over.
+        {"EVfastmode", 1}              // Use (or not) the SPR approximation when checking the hard-core overlap of particles. If on, keeps sampling the given particle until no overlap with other particles achieved, instead of rejecting all sampled particles and starting over.
         })
     {
       if (input_file != "")
@@ -128,7 +129,7 @@ namespace CooperFryeSampler {
     void OutputParameters() {
       const int tabsize = 25;
 
-      std::cout << "Cooper-Frye sampler parameter list:" << "\n";
+      std::cout << "FIST sampler parameter list:" << "\n";
       std::cout << std::setw(tabsize) << "nevents" << " = " << nevents << "\n";
       std::cout << std::setw(tabsize) << "randomseed" << " = " << randomseed << "\n";
 

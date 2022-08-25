@@ -1,12 +1,12 @@
-# Cooper-Frye Sampler
+# FIST sampler
 
 ## Description
 
-This is an implementation of the Cooper-Frye particlization sampling procedure for heavy-ion collisions based on a thermal-statistical package [**Thermal-FIST**](https://github.com/vlvovch/Thermal-FIST)
+FIST sampler is an implementation of the Cooper-Frye particlization sampling procedure for heavy-ion collisions based on a thermal-statistical package [**Thermal-FIST**](https://github.com/vlvovch/Thermal-FIST)
 
 The sampler uses a particlization hypersurface produced in hydro simulations (such as using [**MUSIC**](https://github.com/MUSIC-fluid/MUSIC)) and samples hadrons and resonances from it. Optionally, the chain of decays can then be performed.
 
-A distinctive feature of the sampler is the ability to selectively incorporate the exact (the canonical ensemble) global conservation of conserved charges, such as baryon number, electric charge, strangeness, and charm. It also incorporates experimental support for the effect of baryon repulsive core (excluded volume), in accordance with the EV-HRG model formulated in [https://arxiv.org/abs/1708.02852](https://arxiv.org/abs/1708.02852)
+A distinctive feature of the sampler is the ability to selectively incorporate the exact (the canonical ensemble) global conservation of conserved charges, such as baryon number, electric charge, strangeness, and charm. It also incorporates the effect of baryon repulsive core (excluded volume), in accordance with the EV-HRG model formulated in [https://arxiv.org/abs/1708.02852](https://arxiv.org/abs/1708.02852)
 
 The sampling procedure first determines the numbers of each hadrons species to be sampled in a given event, and then the momentum of each hadrons is sampled independently from other hadrons. This is different from the more conventional Cooper-Frye sampling and allows one to sample the events with the canonical treatment of conserved charges considerably faster. The downside is that the routine requires a considerable amount of memory, in practice about ~5-15 GB for central Au-Au collisions.
 
@@ -25,26 +25,26 @@ Currently the sampling does not incorporate viscous corrections.
 For a Linux system:
 ```bash
 # Clone the repository fetching the submodule(s)
-git clone --recurse-submodules https://github.com/vlvovch/CooperFryeSampler.git
+git clone --recurse-submodules https://github.com/vlvovch/fist-sampler.git
 
 # Create the build directory and build the project
-cd CooperFryeSampler
+cd fist-sampler
 mkdir build
 cd build
 cmake ../
-make CooperFryeSampler
+make FISTSampler
 ```
 
 ## Usage
 ```bash
-./CooperFryeSampler <input-file>
+./FISTSampler <input-file>
 ```
 
 Here `input-file` contains the parameters for the sampling. 
 
-## Example
+## Examples
 
-See [input/input.AuAu.7.7.C0-5](input/input.AuAu.7.7.C0-5) for a sample input corresponding to 0-5% central Au-Au collisions, which includes the description of all the relevant parameters.
+See [input/input.AuAu.7.7.C0-5](input/input.AuAu.7.7.C0-5) for a sample input corresponding to 0-5% central Au-Au collisions at 7.7 GeV, which includes the description of all the relevant parameters.
 See also [input/input.AuAu.7.7.C0-5.EVHRG](input/input.AuAu.7.7.C0-5.EVHRG) for a sample input which includes the excluded volume effect for (anti)baryons.
 
 The sampler requires an input file with the particlization hypersurface. One of the supported formats is the binary output from MUSIC.
@@ -57,10 +57,13 @@ from the build directory. This will take ~1.5GB of space, this space can be redu
 
 Then, to sample Au-Au collisions at 7.7 GeV run
 ```bash
-./CooperFryeSampler ../input/input.AuAu.7.7.C0-5
+./FISTSampler ../input/input.AuAu.7.7.C0-5
 ```
 This should generate 1000 collisions with the canonical treatment of baryon number in ascii output file `AuAu.7.7.C0-5.events.dat`
 
+The [input](input) folder contains also other systems.
+For instance, [input.HADES.AuAu.2.4.C0-5](input.HADES.AuAu.2.4.C0-5) and [input.HADES.AuAu.2.4.C0-5.EVHRG](input.HADES.AuAu.2.4.C0-5.EVHRG) correspond to Siemens-Rasmussen-Hubble model based event generator of 0-5% central 2.4 GeV Au-Au collisions corresponding to the HADES experiment, with and without the excluded volume effect, respectively.
+On other hand, [input.ALICE.PbPb.2760.C0-5](input.ALICE.PbPb.2760.C0-5) and [input.ALICE.PbPb.2760.C0-5.EVHRG](input.ALICE.PbPb.2760.C0-5.EVHRG) correspond to blast-wave model based event generator of 0-5% 2.76 TeV Pb-Pb collisions.
 
 ## Attribution
 Publications using this sampler should include a reference to the **Thermal-FIST** package

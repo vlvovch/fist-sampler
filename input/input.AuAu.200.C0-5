@@ -1,6 +1,9 @@
-# Input parameters for the Cooper-Frye sampler using particlization hypersurface for Au-Au 7.7 GeV collision from MUSIC
+# Input parameters for the FIST sampler using particlization hypersurface for Au-Au 200 GeV collisions from MUSIC
 # Format: <parameter-name> <parameter-value>
 # Everything after # is ignored
+
+# The format of the Cooper-Frye hypersurface
+fist_sampler_mode 0   # 0 - Coarse-grained from file, 1 - Siemens-Rasmussen-Hubble, 2 - boost-invariant blast-wave
 
 # The number of events
 nevents 1000
@@ -55,6 +58,13 @@ hypersurface_filetype 2
 # The file name with the particlization hypersurface (absolute or relative path)
 hypersurface_file hydro/AuAu.200/C0-5/surface_eps_0.26.dat
 
+# Whether to recalculate T and \mu along the hypersurface to match energy and baryon density from hydro
+# This part is particularly relevant for EV-HRG because T and \mu were originally computed in MUSIC assuming ideal HRG
+# It is imperative that the Cooper-Frye corresponds to constant energy density of edens (see the next parameter)
+rescaleTmu 1
+
+# The value of energy density corresponding to the Cooper-Frye particlization hypersurface from MUSIC (in GeV/fm^3)
+edens 0.26
 
 # The output file name for the generated events (absolute or relative path)
 output_file AuAu.200.C0-5.events.dat

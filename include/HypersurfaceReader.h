@@ -1,5 +1,5 @@
-#ifndef HYPERSURFACE_READER_H
-#define HYPERSURFACE_READER_H
+#ifndef FIST_SAMPLER_HYPERSURFACE_READER_H
+#define FIST_SAMPLER_HYPERSURFACE_READER_H
 
 #include <fstream>
 #include <string>
@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #endif
 
-namespace CooperFryeSampler {
+namespace FistSampler {
 
   static void ReadParticlizationHypersurface(const std::string& hypersurface_filename, thermalfist::ParticlizationHypersurface& hypersurface, int binary_file_mode = 0) {
     if (binary_file_mode) {
