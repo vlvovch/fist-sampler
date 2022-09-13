@@ -44,8 +44,8 @@ int main(int argc, char* argv[]) {
   //fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.AuAu.7.7.C70-80.EVHRG";
 
   if (argc > 1) {
-    string fileinput = string(argv[1]);
-    run_parameters.ReadParametersFromFile(fileinput);
+    fileinput = string(argv[1]);
+    // run_parameters.ReadParametersFromFile(fileinput);
   }
 
   run_parameters.ReadParametersFromFile(fileinput);
