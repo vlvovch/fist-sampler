@@ -17,3 +17,10 @@ local*/*
 
 # Doxygen
 docs/doxygen/html*
+
+# CLion
+.idea/*
+cmake-build-*/*
+
+# Mac OS
+.DS_Store

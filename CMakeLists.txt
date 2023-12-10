@@ -28,3 +28,5 @@ add_executable (FISTSampler FistSampler.cpp include/HypersurfaceReader.h include
 #target_link_libraries (CooperFryeSampler ThermalFIST ThermalFISTExtended sample_statistics)
 target_link_libraries (FISTSampler ThermalFIST)
 set_property(TARGET FISTSampler PROPERTY FOLDER "fist-sampler")
+
+add_subdirectory(tasks/Dmeasure)

@@ -1,0 +1,83 @@
+# Input parameters for the FIST sampler utilizing the blast-wave model for 2.76 TeV Pb-Pb collision at the LHC
+# Includes the effect of baryon excluded volume in the sampling procedure
+# Format: <parameter-name> <parameter-value>
+# Everything after # is ignored
+
+# The format of the Cooper-Frye hypersurface
+fist_sampler_mode 2   # 0 - Coarse-grained from file, 1 - Siemens-Rasmussen-Hubble, 2 - boost-invariant blast-wave
+
+# The number of events
+nevents 100000
+
+# The random number generator seed
+randomseed 1
+
+
+# The particle list file (absolute or relative path)
+# If not set, uses the default particle list WITHOUT light nuclei
+# To set a different list, uncomment the line below
+# particle_list_file <path-to-the-particle-list>
+
+# The decay channels list file (absolute or relative path)
+# If not set, uses the "decays.dat" file from the same folder where the list file is
+# To use a different file, uncomment the line below
+# decays_list_file <path-to-the-decay-list>
+
+# Global conservation of baryon number
+Bcanonical 0    # 0 - grand-canonical, 1 - canonical
+
+# Global conservation of electric charge
+Qcanonical 0    # 0 - grand-canonical, 1 - canonical
+
+# Global conservation of strangeness
+Scanonical 0    # 0 - grand-canonical, 1 - canonical
+
+# Global conservation of charm
+Ccanonical 0    # 0 - grand-canonical, 1 - canonical
+
+# Finite resonance widths treatment
+finite_widths 0 # 0 - zero-width, 1 - eBW (const BR) (energy-dependent Breit-Wigner spectral functions with constant branching ratios)
+
+
+# Treatment of decays
+# 0 - no decays (only primordial hadrons)
+# 1 - according to the stability flags in the particle list
+# 2 - strong decays
+# 3 - strong + electromagnetic decays
+# 4 - strong + electromagnetic + weak decays (charged pions and kaons remain stable)
+# 10 - decay only those resonances that are no recognized by UrQMD
+decays 3 
+
+
+# Chemical freeze-out parameters
+T   0.160  # Temperature in GeV
+muB 0.000  # Baryon chemical potential in GeV
+muQ 0.000  # Electric charge chemical potential in GeV
+muS 0.000  # Strangeness chemical potential in GeV
+muC 0.000  # Charm chemical potential in GeV
+
+# 5 TeV: https://arxiv.org/pdf/1910.07678.pdf
+# 2.76 TeV: https://arxiv.org/pdf/1303.0737.pdf
+# 5/2.76 ratio of Nch is 1943/1601 = 1.20675
+# dVdy 4827. # Volume at mid-rapidity [fm^3]
+dVdy 482.7 # Reduced volume at mid-rapidity [fm^3]
+
+# Blast-wave model parameters (from https://arxiv.org/pdf/1910.07678.pdf)
+BW_Tkin   0.090   # Kinetic freeze-out temperature [GeV]
+# BW_rmax   9.89   # Transverse radius [fm]
+BW_rmax   3.13    # Reduced ransverse radius [fm]
+BW_betaS  0.906    # Radial flow surface velocity
+BW_n      0.735   # Radial flow profile
+BW_etamax 5.1     # Space-time rapidity cut-off
+
+# The output file name for the generated events (absolute or relative path)
+output_file Dmeasure.GCE.ALICEBW.PbPb.5020.C0-5.EVHRG.dat
+
+# The output format
+# 0 - FIST ascii
+# 1 - output tailored for UrQMD afterburner at https://github.com/jbernhard/urqmd-afterburner
+# Any other value -- no output
+output_format 2
+
+# Excluded volume parameter (in fm^3)
+b 1.0
