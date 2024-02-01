@@ -1,3 +1,6 @@
 [submodule "Thermal-FIST"]
 	path = Thermal-FIST
 	url = https://github.com/vlvovch/Thermal-FIST
+[submodule "include/sample-moments"]
+	path = include/sample-moments
+	url = https://github.com/vlvovch/sample-moments

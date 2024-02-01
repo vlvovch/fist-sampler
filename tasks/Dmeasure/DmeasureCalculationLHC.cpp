@@ -21,8 +21,8 @@
 
 #include "FistSamplerConfig.h"
 
-#include "sample-moments/NumberStatistics.h"
-#include "sample-moments/TwoNumberStatistics.h"
+#include "sample-moments/include/NumberStatistics.h"
+#include "sample-moments/include/TwoNumberStatistics.h"
 
 using namespace std;
 
