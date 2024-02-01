@@ -71,7 +71,7 @@ BW_n      0.735   # Radial flow profile
 BW_etamax 5.1     # Space-time rapidity cut-off
 
 # The output file name for the generated events (absolute or relative path)
-output_file Dmeasure.GCE.ALICEBW.PbPb.5020.C0-5.EVHRG.dat
+output_file Dmeasure.GCEfull.ALICEBW.PbPb.5020.C0-5.EVHRG.dat
 
 # The output format
 # 0 - FIST ascii
