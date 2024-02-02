@@ -87,6 +87,7 @@ namespace FistSampler {
     WriteHypersurfaceToBinaryFile(hypersurface, hypersurface_filename_binary);
   }
 
+  // Following the iSS sampler https://github.com/chunshen1987/iSS/blob/main/src/readindata.cpp#L626
   static void ReadParticlizationHypersurfaceMUSIC(const std::string& hypersurface_filename, 
     thermalfist::ParticlizationHypersurface& hypersurface
     ) {
@@ -135,6 +136,7 @@ namespace FistSampler {
 
       double cosheta = std::cosh(elem.eta), sinheta = std::sinh(elem.eta);
 
+      // Transform u and dSigma to Cartesian coordinates
       elem.u[0] = uu0 * cosheta + uu3 * sinheta;
       elem.u[1] = uu1;
       elem.u[2] = uu2;
@@ -150,6 +152,52 @@ namespace FistSampler {
         dVeff2 += elem.dsigma[mu] * elem.u[mu];
 
       double umod2 = elem.u[0] * elem.u[0] - elem.u[1] * elem.u[1] - elem.u[2] * elem.u[2] - elem.u[3] * elem.u[3];
+
+      // Shear stress tensor and pressure
+      //float* pi = &arr[18];
+      // First, in the Milne coordiantes
+      double piMilne00 = arr[18] / thermalfist::xMath::GeVtoifm();
+      double piMilne01 = arr[19] / thermalfist::xMath::GeVtoifm();
+      double piMilne02 = arr[20] / thermalfist::xMath::GeVtoifm();
+      double piMilne03 = arr[21] / thermalfist::xMath::GeVtoifm();
+      double piMilne11 = arr[22] / thermalfist::xMath::GeVtoifm();
+      double piMilne12 = arr[23] / thermalfist::xMath::GeVtoifm();
+      double piMilne13 = arr[24] / thermalfist::xMath::GeVtoifm();
+      double piMilne22 = arr[25] / thermalfist::xMath::GeVtoifm();
+      double piMilne23 = arr[26] / thermalfist::xMath::GeVtoifm();
+      double piMilne33 = arr[27] / thermalfist::xMath::GeVtoifm();
+      // Now transfer to Cartesian coordinates and index44
+      // Transform to Cartesian coordinates as per https://github.com/chunshen1987/iSS/blob/main/src/iSS.cpp#L248
+      // pi[0] == pi_tz[0][0]
+      elem.pi[0] = piMilne00 * cosheta * cosheta +
+              2. * piMilne03 * cosheta * sinheta +
+              piMilne33 * sinheta * sinheta;
+      // pi[1] == pi_tz[0][1]
+      elem.pi[1] = piMilne01 * cosheta + piMilne13 * sinheta;
+      // pi[2] == pi_tz[1][1]
+      elem.pi[2] = piMilne11;
+      // pi[3] == pi_tz[0][2]
+      elem.pi[3] = piMilne02 * cosheta + piMilne23 * sinheta;
+      // pi[4] == pi_tz[1][2]
+      elem.pi[4] = piMilne12;
+      // pi[5] == pi_tz[2][2]
+      elem.pi[5] = piMilne22;
+      // pi[6] == pi_tz[0][3]
+      elem.pi[6] = piMilne00 * cosheta * sinheta +
+                   piMilne03 * (cosheta*cosheta + sinheta*sinheta) +
+                   piMilne33 * sinheta * cosheta;
+      // pi[7] == pi_tz[1][3]
+      elem.pi[7] = piMilne01 * sinheta + piMilne13 * cosheta;
+      // pi[8] == pi_tz[2][3]
+      elem.pi[8] = piMilne02 * sinheta + piMilne23 * cosheta;
+      // pi[9] == pi_tz[3][3]
+      elem.pi[9] = piMilne00 * sinheta * sinheta +
+                   2. * piMilne03 * sinheta * cosheta +
+                   piMilne33 * cosheta * cosheta;
+
+      // Now calculate the pressure
+      // array[17] == (e + P) / T
+      elem.P = (arr[17] * elem.T - elem.edens);
 
       if (!fin.eof() && elem.T > 0.01) // As in iSS
         hypersurface.push_back(elem);

@@ -30,3 +30,4 @@ target_link_libraries (FISTSampler ThermalFIST)
 set_property(TARGET FISTSampler PROPERTY FOLDER "fist-sampler")
 
 add_subdirectory(tasks/Dmeasure)
+add_subdirectory(tasks/MeanPt)

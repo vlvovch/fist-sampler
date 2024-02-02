@@ -74,3 +74,6 @@ output_file AuAu.7.7.C70-80.events.dat
 # 1 - output tailored for UrQMD afterburner at https://github.com/jbernhard/urqmd-afterburner
 # Any other value -- no output
 output_format 0
+
+# Shear viscous correction
+shear_correction 0

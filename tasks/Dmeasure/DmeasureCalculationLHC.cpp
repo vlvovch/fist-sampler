@@ -35,9 +35,6 @@ using namespace FistSampler;
 
 ThermalParticleSystem parts_pdg(ThermalFIST_DEFAULT_LIST_FILE);
 
-// Statistics for the D-measure
-
-
 // Nch acceptances
 struct NchAcceptance {
   double pTmin;

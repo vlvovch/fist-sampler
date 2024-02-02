@@ -7,7 +7,7 @@
 fist_sampler_mode 0   # 0 - Coarse-grained from file, 1 - Siemens-Rasmussen-Hubble, 2 - boost-invariant blast-wave
 
 # The number of events
-nevents 10000
+nevents 100000
 
 # The random number generator seed
 randomseed 1
@@ -78,7 +78,7 @@ b 1.0
 # If negative (default), its value is inferred from b as r = (3 * b / (16 \pi))^{1/3}
 radB -1.0
 
-# Whether to recalculate T and \mu along the hypersurface to match energy abd baryon density from hydro
+# Whether to recalculate T and \mu along the hypersurface to match energy and baryon density from hydro
 # This part is relevant for EV-HRG because T and \mu were originally computed in MUSIC assuming ideal HRG
 # It is imperative that the Cooper-Frye corresponds to constant energy density of edens (see the next parameter)
 rescaleTmu 1
@@ -96,3 +96,6 @@ use_idealHRG_for_means 0
 # The fast mode appears to be very accurate compared to the full method, and currently it is needed for
 # the sampling of (semi-)central collisions where the full method is prohibitively expensive.
 EVfastmode 1
+
+# Shear viscous correction
+shear_correction 0
