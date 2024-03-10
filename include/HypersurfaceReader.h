@@ -5,6 +5,7 @@
 #include <string>
 #include <functional>
 #include "HRGEventGenerator.h"
+#include "FistSamplerConfig.h"
 
 #if defined(__linux__) || defined(__APPLE__)
 #include <sys/stat.h>
@@ -95,7 +96,14 @@ namespace FistSampler {
 
     if (!fin.is_open()) {
       std::cout << "Hypersurface file " << hypersurface_filename << " not found!" << std::endl;
-      return;
+      std::string hypersurface_filename2 = std::string(FistSampler_INPUT_FOLDER) + "/" + hypersurface_filename;
+      std::cout << "Trying " << hypersurface_filename2 << std::endl;
+      fin.open(hypersurface_filename2, std::ios::binary);
+      if (!fin.is_open()) {
+        std::cout << "Hypersurface file " << hypersurface_filename2 << " not found!" << std::endl;
+        std::cout << "Aborting..." << std::endl;
+        return;
+      }
     }
 
     hypersurface.clear();
