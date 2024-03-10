@@ -1,6 +1,3 @@
-// Mean pT fluctuations
-// Test only on 3 GeV Au-Au collisions
-
 #include <string.h>
 #include <fstream>
 #include <iostream>
@@ -34,79 +31,7 @@ using namespace thermalfist;
 #endif
 
 using namespace FistSampler;
-//using namespace sample_moments;
 
-ThermalParticleSystem parts_pdg(ThermalFIST_DEFAULT_LIST_FILE);
-
-// List of species
-vector<long long> species_list = {211, 321, 2212, 3122, 3312, 3334};
-
-// Rapidity cut
-double ycut = 0.5;
-
-
-// Process a single event
-void ProcessEventForMeanPts(const SimpleEvent& event,
-                            SampleMoments::NumberStatistics& statsNchPt,
-                            vector<SampleMoments::NumberStatistics>& allstatsPts) {
-  int Nchtot = 0;
-  double totPtNch = 0.;
-  vector<int> Nps(allstatsPts.size(),0);
-  vector<double> totPts(allstatsPts.size(),0.);
-
-  // Iterate over all particles in the event
-  for (const auto& particle : event.Particles) {
-    // Check if the particle is a charged hadron
-    int Q = parts_pdg.ParticleByPDG(particle.PDGID).ElectricCharge();
-    if (Q != 0) {
-      // Check if particle is inside rapidity cut
-      if (abs(particle.GetY()) < ycut) {
-        totPtNch += particle.GetPt();
-        statsNchPt.AddObservation(particle.GetPt());
-        Nchtot++;
-      }
-    }
-
-    for(int ipdg = 0; ipdg < species_list.size(); ipdg++) {
-      auto pdg = species_list[ipdg];
-      if (particle.PDGID == pdg) {
-        totPts[ipdg] += particle.GetPt();
-        allstatsPts[ipdg].AddObservation(particle.GetPt());
-        Nps[ipdg]++;
-      }
-    }
-  }
-
-  // Add observables to the statistics
-  //statsNchPt.AddObservation(totPtNch / Nchtot);
-//  for(int ipdg = 0; ipdg < species_list.size(); ipdg++) {
-//    allstatsPts[ipdg].AddObservation(totPts[ipdg] / Nps[ipdg]);
-//  }
-}
-
-void WriteMeanPtResults(ostream& ostr,
-        SampleMoments::NumberStatistics& statsNchPt,
-        vector<SampleMoments::NumberStatistics>& allstatsPts) {
-  ostr << setw(15) << "Entries" << " "
-       << setw(15) << "Species" << " "
-       << setw(15) << "<pT>[MeV]" << " "
-       << setw(15) << "Error" << " ";
-  ostr << endl;
-
-  for(int ipdg = 0; ipdg < species_list.size(); ipdg++) {
-    ostr << setw(15) << allstatsPts[ipdg].GetNumberOfObservations() << " ";
-    ostr << setw(15) << species_list[ipdg] << " ";
-    ostr << setw(15) << 1.e3 * allstatsPts[ipdg].GetMean() << " ";
-    ostr << setw(15) << 1.e3 * allstatsPts[ipdg].GetMeanError() << " ";
-    ostr << endl;
-  }
-
-  ostr << setw(15) << statsNchPt.GetNumberOfObservations() << " ";
-  ostr << setw(15) << "Charged" << " ";
-  ostr << setw(15) << 1.e3 * statsNchPt.GetMean() << " ";
-  ostr << setw(15) << 1.e3 * statsNchPt.GetMeanError() << " ";
-  ostr << endl;
-}
 
 int main(int argc, char* argv[]) {
 
@@ -115,10 +40,7 @@ int main(int argc, char* argv[]) {
   FistSamplerParameters run_parameters;
 
 
-  string fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.ALICE.PbPb.2760.C0-5.EVHRG";
-  //fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.AuAu.7.7.C0-5.EVHRG";
-  //fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.HADES.AuAu.2.4.C0-5.EVHRG";
-  //fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.AuAu.7.7.C70-80.EVHRG";
+  string fileinput = std::string(FistSampler_INPUT_FOLDER) + "/../tasks/MeanPt/input/input.STAR.AuAu.3GeV.C0-5";
 
   if (argc > 1) {
     fileinput = string(argv[1]);
@@ -166,13 +88,18 @@ int main(int argc, char* argv[]) {
 
   cout << "Initializing event generator..." << "\n";
   EventGeneratorBase* evtgen;
-  
+  EventGeneratorBase* evtgen2;
+
   if (fist_sampler_mode == 0 || fist_sampler_mode == 1) {
     evtgen = CreateEventGeneratorFromHypersurface(run_parameters, hypersurface);
-  } 
+  }
   else if (fist_sampler_mode == 2) {
     evtgen = CreateBlastWaveEventGenerator(run_parameters);
+    //run_parameters.parameters["BW_betaS"] = 0.80;
+    //evtgen2 = CreateBlastWaveEventGenerator(run_parameters);
+
   }
+
   evtgen->CheckSetParameters();
   cout << "Initialization complete!" << "\n";
 
@@ -186,10 +113,7 @@ int main(int argc, char* argv[]) {
   else if (lround(run_parameters.parameters["output_format"]) == 1)
     event_writer = new EventWriterForUrqmd(run_parameters.output_file);
 
-  ofstream fout_events;
-  if (event_writer != NULL) {
-    fout_events.open(run_parameters.output_file);
-  }
+  ofstream fout_events(run_parameters.output_file);
 
   // Measure time
   double wt1 = get_wall_time();
@@ -198,16 +122,21 @@ int main(int argc, char* argv[]) {
   cout << "Sampling " << run_parameters.nevents << " events..." << endl;
 
   // Prepare statistics
-  SampleMoments::NumberStatistics statsNchPt;
-  vector<SampleMoments::NumberStatistics> allstatsPts(species_list.size());
+  SampleMoments::NumberStatistics statsp;
+  SampleMoments::NumberStatistics statsMeanPt;
+  SampleMoments::NumberStatistics statsCk;
+
+  vector<double> meanPt_entries;
+  vector<double> meanPtiPtj_entries;
 
   // Loop through the events
   for (long long event_number = 0; event_number < run_parameters.nevents; ++event_number) {
     // Sample the primordial hadrons
-    SimpleEvent evt = evtgen->GetEvent(false);
-
-    // Gather statistics for primordial hadrons
-    //ProcessEventForMeanPts(evt, statsNchPt, allstatsPts);
+    SimpleEvent evt;
+    //if (event_number < run_parameters.nevents / 2)
+    evt = evtgen->GetEvent();
+    //else
+    //evt = evtgen2->GetEvent();
 
     // Perform the decays, if necessary
     if (lround(run_parameters.parameters["decays"]) != 0) {
@@ -216,26 +145,92 @@ int main(int argc, char* argv[]) {
 
     // Write the event to file
     if (event_writer != NULL) {
-      event_writer->WriteEvent(evt);
+      //event_writer->WriteEvent(evt);
     }
 
-    // Process event for the mean Pt
-    ProcessEventForMeanPts(evt, statsNchPt, allstatsPts);
+    // Loop over all the particles
+    int Np = 0;
+    int Nch = 0;
+    double totPt = 0.;
+    vector<double> pTi;
+    for (auto& part: evt.Particles) {
+      // Count protons
+      if (part.PDGID == 2212 && part.GetPt() > 0.4 && part.GetPt() < 2.0 && abs(part.GetY()) < 0.5)
+        Np++;
 
-    // Periodically print the number of processed events on screen (every 1% or every 1000 events)
-    if (run_parameters.nevents < 100 || (event_number + 1) % (run_parameters.nevents / 1) == 0 || (event_number + 1) % 1000 == 0) {
-      cout << (event_number + 1) << " " << endl;
+      // Count charged particles
+      if (evtgen->ThermalModel()->TPS()->ParticleByPDG(part.PDGID).ElectricCharge() != 0) {
+
+        // Momentum cuts
+        double pTmin = 0.150, pTmax = 2.000;
+        double etamax = 1.0;
+        if (part.GetPt() > pTmin && part.GetPt() < pTmax && abs(part.GetEta()) < etamax) {
+          Nch++;
+          double tPt = part.GetPt();
+          totPt += tPt;
+          pTi.push_back(tPt);
+        }
+      }
+    }
+
+
+    double meanPt = totPt / Nch;
+    meanPt_entries.push_back(meanPt);
+
+    double ptiptj = 0.;
+    for(int i = 0; i < Nch; ++i) {
+      for(int j = 0; j < Nch; ++j) {
+        if (i != j)
+          ptiptj += pTi[i] * pTi[j];
+      }
+    }
+    ptiptj /= Nch * (Nch - 1.);
+
+    meanPtiPtj_entries.push_back(ptiptj);
+
+    statsp.AddObservation(Np);
+    statsMeanPt.AddObservation(meanPt);
+
+    // Periodically print the number of processed events on screen
+    if (run_parameters.nevents < 100 || (event_number + 1) % (run_parameters.nevents / 100) == 0 || (event_number + 1) % 1000 == 0) {
+      cout << (event_number + 1) << " ";
       cout.flush();
-
-      // Print the statistics
-      WriteMeanPtResults(cout, statsNchPt, allstatsPts);
     }
   }
   cout << endl;
 
+
+  // Gather mean pT statistics
+  for (long long event_number = 0; event_number < run_parameters.nevents; ++event_number) {
+    double Ck = meanPtiPtj_entries[event_number];
+    Ck += -2. * statsMeanPt.GetMean() * meanPt_entries[event_number];
+    Ck += statsMeanPt.GetMean() * statsMeanPt.GetMean();
+    statsCk.AddObservation(Ck);
+  }
+
   // Cleanup
   delete evtgen;
   delete TPS;
+
+  cout << setw(40) << "k1 = " << statsp.GetMean() << " +- " << statsp.GetMeanError() << endl;
+
+  cout << setw(40) << "k2/k1 = " << statsp.GetScaledVariance() << " +- " << statsp.GetScaledVarianceError() << endl;
+
+  cout << setw(40) << "<<p_T>>[GeV] = " << statsMeanPt.GetMean() << " +- " << statsMeanPt.GetMeanError() << endl;
+
+  cout << setw(40) << "<<Delta p_T^2>>[GeV^2] = " << statsMeanPt.GetVariance() << " +- " << statsMeanPt.GetVarianceError() << endl;
+
+  cout << setw(40) << "<<Delta p_T^2>>[GeV] = " << sqrt(statsMeanPt.GetVariance()) << " +- " <<
+       statsMeanPt.GetVarianceError()/2./sqrt(statsMeanPt.GetVariance()) << endl;
+
+  cout << setw(40) << "<<Delta p_T_i,j>>[GeV^2] = " << statsCk.GetMean() << " +- " << statsCk.GetMeanError() << endl;
+
+  cout << setw(40) << "sqrt(<<Delta p_T^2>>)/<p_T> = " << sqrt(statsMeanPt.GetVariance()) / statsMeanPt.GetMean() << " +- "
+       << statsMeanPt.GetVarianceError() / 2. / sqrt(statsMeanPt.GetVariance()) / statsMeanPt.GetMean() << endl;
+
+  cout << setw(40) << "sqrt(<<Delta p_T_i,j>>)/<p_T> = " << sqrt(abs(statsCk.GetMean())) / statsMeanPt.GetMean() << " +- "
+       << statsCk.GetMeanError() / 2. / sqrt(abs(statsCk.GetMean())) / statsMeanPt.GetMean() << endl;
+
 
   // Time performace
   double wt2 = get_wall_time();

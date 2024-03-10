@@ -434,6 +434,7 @@ namespace FistSampler {
     double Veff = dVdy * 2. * BW_etamax;
     configMC.CFOParameters.V = configMC.CFOParameters.SVc = Veff;
 
+    configMC.fUseGCEConservedCharges = true;
 
     thermalfist::CylindricalBlastWaveEventGenerator* evtgen = new thermalfist::CylindricalBlastWaveEventGenerator(
       TPS, configMC,
