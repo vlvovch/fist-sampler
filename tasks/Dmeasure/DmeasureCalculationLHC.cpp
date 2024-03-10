@@ -165,10 +165,7 @@ int main(int argc, char* argv[]) {
   FistSamplerParameters run_parameters;
 
 
-  string fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.ALICE.PbPb.2760.C0-5.EVHRG";
-  //fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.AuAu.7.7.C0-5.EVHRG";
-  //fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.HADES.AuAu.2.4.C0-5.EVHRG";
-  //fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.AuAu.7.7.C70-80.EVHRG";
+  string fileinput = std::string(FistSampler_INPUT_FOLDER) + "/../tasks/Dmeasure/input/input.BQS.ALICE.PbPb.5020.C0-5.EVHRG.ALICEBW";
 
   if (argc > 1) {
     fileinput = string(argv[1]);
