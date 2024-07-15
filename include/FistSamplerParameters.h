@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <functional>
+#include <limits>
 #include "HRGEventGenerator.h"
 
 #if defined(__linux__) || defined(__APPLE__)
