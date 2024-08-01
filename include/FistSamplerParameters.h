@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <functional>
+#include <limits>
 #include "HRGEventGenerator.h"
 
 #if defined(__linux__) || defined(__APPLE__)
@@ -57,6 +58,7 @@ namespace FistSampler {
         {"rescaleTmu", 0},             // Rescale the values of T and mu to match energy and baryon densities from hydro, most relevant when EV-HRG model used, less so for Id-HRG. Note that the hypersurface MUST correspond to constant energy density of edens
         {"edens",   0.26},             // The energy density corresponding to the Cooper-Frye hypersurface
         {"use_idealHRG_for_means", 0}, // Use the ideal HRG model when evaluating mean hadron yields, faster initialization at moderate accuracy cost
+        {"shear_correction", 0},       // Apply shear viscous corrections to the particle spectra
         {"EVfastmode", 1}              // Use (or not) the SPR approximation when checking the hard-core overlap of particles. If on, keeps sampling the given particle until no overlap with other particles achieved, instead of rejecting all sampled particles and starting over.
         })
     {

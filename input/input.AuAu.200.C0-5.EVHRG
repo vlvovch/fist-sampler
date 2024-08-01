@@ -96,3 +96,6 @@ use_idealHRG_for_means 0
 # The fast mode appears to be very accurate compared to the full method, and currently it is needed for
 # the sampling of (semi-)central collisions where the full method is prohibitively expensive.
 EVfastmode 1
+
+# Shear viscous correction
+shear_correction 0

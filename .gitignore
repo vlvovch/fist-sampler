@@ -10,6 +10,14 @@ Debug*/*
 Release*/*
 local*/*
 
+# # The generated events
+input/*events.dat*
+
+# # Large hydrodynamic files (except the example)
+input/hydro/*/*/*.dat
+!input/hydro/AuAu.7.7/C70-80/surface_eps_0.26.dat
+
+
 # Visual Studio
 .vs/*
 

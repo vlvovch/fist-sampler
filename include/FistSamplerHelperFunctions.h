@@ -231,6 +231,9 @@ namespace FistSampler {
     evtgen->SetRescaleTmu((lround(run_parameters.parameters["rescaleTmu"]) != 0), run_parameters.parameters["edens"]);
     evtgen->SetEVUseSPR((lround(run_parameters.parameters["EVfastmode"]) != 0));
 
+    bool shear_correction = (lround(run_parameters.parameters["shear_correction"]) != 0);
+    evtgen->SetShearCorrection(shear_correction);
+
     return evtgen;
   }
 
@@ -431,6 +434,9 @@ namespace FistSampler {
     double Veff = dVdy * 2. * BW_etamax;
     configMC.CFOParameters.V = configMC.CFOParameters.SVc = Veff;
 
+    // In case we do canonical ensemble, we will calculate total conserved charges grand-canonically assuming the system is large enough
+    // or has zero conserved charges (LHC)
+    configMC.fUseGCEConservedCharges = true;
 
     thermalfist::CylindricalBlastWaveEventGenerator* evtgen = new thermalfist::CylindricalBlastWaveEventGenerator(
       TPS, configMC,
