@@ -39,6 +39,7 @@ struct AllStats {
   // Protons
   double pTminprot = 0.4, pTmaxprot = 2.0;
   double ycutprot = 0.5;
+  double DCAcutprot = 1.0 * 1.e13;
   SampleMoments::TwoNumberStatistics statspB;
   SampleMoments::TwoNumberStatistics statsppB;
   SampleMoments::TwoNumberStatistics statspmB;
@@ -46,6 +47,7 @@ struct AllStats {
   // Lambdas
   double pTminlam = 0.9, pTmaxlam = 2.0;
   double ycutL = 0.5;
+  double DCAcutLa = 1.0 * 1.e13;
   SampleMoments::TwoNumberStatistics statsLB;
   SampleMoments::TwoNumberStatistics statsLpB;
   SampleMoments::TwoNumberStatistics statsLmB;
@@ -59,6 +61,7 @@ struct AllStats {
   // Kaons
   double pTminka = 0.2, pTmaxka = 1.6;
   double ycutka = 0.5;
+  double DCAcutka = 1.0 * 1.e13;
   SampleMoments::TwoNumberStatistics statsKS;
   SampleMoments::TwoNumberStatistics statsKpS;
   SampleMoments::TwoNumberStatistics statsKmS;
@@ -69,6 +72,7 @@ struct AllStats {
   // Net-charge
   double pTch = 0.2, pTmaxch = 2.0;
   double etacutch = 0.5;
+  double DCAcutch= 1.0 * 1.e13;
   SampleMoments::TwoNumberStatistics statsNchQ;
   SampleMoments::TwoNumberStatistics statsNchpQ;
   SampleMoments::TwoNumberStatistics statsNchmQ;
@@ -117,12 +121,14 @@ struct AllStats {
     for (const auto& particle : event.Particles) {
       if (particle.PDGID == 2212) {
         if (particle.GetPt() > pTminprot && particle.GetPt() < pTmaxprot && abs(particle.GetY()) < ycutprot) {
-          Nprot += 1;
+          if (ParticleDecaysMC::ComputeDCA(particle) < DCAcutprot)
+            Nprot += 1;
         }
       }
       if (particle.PDGID == -2212) {
         if (particle.GetPt() > pTminprot && particle.GetPt() < pTmaxprot && abs(particle.GetY()) < ycutprot) {
-          Naprot += 1;
+          if (ParticleDecaysMC::ComputeDCA(particle) < DCAcutprot)
+            Naprot += 1;
         }
       }
     }
@@ -132,12 +138,14 @@ struct AllStats {
     for (const auto& particle : event.AllParticles) {
       if (particle.PDGID == 3122) {
         if (particle.GetPt() > pTminlam && particle.GetPt() < pTmaxlam && abs(particle.GetY()) < ycutL) {
-          NL += 1;
+          if (ParticleDecaysMC::ComputeDCA(particle) < DCAcutLa)
+            NL += 1;
         }
       }
       if (particle.PDGID == -3122) {
         if (particle.GetPt() > pTminlam && particle.GetPt() < pTmaxlam && abs(particle.GetY()) < ycutL) {
-          NAL += 1;
+          if (ParticleDecaysMC::ComputeDCA(particle) < DCAcutLa)
+            NAL += 1;
         }
       }
     }
@@ -147,12 +155,14 @@ struct AllStats {
     for (const auto& particle : event.AllParticles) {
       if (particle.PDGID == 321) {
         if (particle.GetPt() > pTminka && particle.GetPt() < pTmaxka && abs(particle.GetY()) < ycutka) {
-          NK += 1;
+          if (ParticleDecaysMC::ComputeDCA(particle) < DCAcutka)
+            NK += 1;
         }
       }
       if (particle.PDGID == -321) {
         if (particle.GetPt() > pTminka && particle.GetPt() < pTmaxka && abs(particle.GetY()) < ycutka) {
-          NAK += 1;
+          if (ParticleDecaysMC::ComputeDCA(particle) < DCAcutka)
+            NAK += 1;
         }
       }
     }
@@ -164,12 +174,14 @@ struct AllStats {
       int Q = TPS->ParticleByPDG(particle.PDGID).ElectricCharge();
       if (Q != 0) {
         if (particle.GetPt() > pTch && particle.GetPt() < pTmaxch && abs(particle.GetEta()) < etacutch) {
-          if (Q > 0) {
-            Nchp += 1;
-            Qpacc += Q;
-          } else {
-            Nchm += 1;
-            Qmacc += abs(Q);
+          if (ParticleDecaysMC::ComputeDCA(particle) < DCAcutch) {
+            if (Q > 0) {
+              Nchp += 1;
+              Qpacc += Q;
+            } else {
+              Nchm += 1;
+              Qmacc += abs(Q);
+            }
           }
         }
       }
@@ -365,8 +377,12 @@ int main(int argc, char* argv[]) {
   cout << "Running FIST sampler version " << FistSampler_VERSION_MAJOR << "." << FistSampler_VERSION_MINOR << endl << endl;
 
   string fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.AuAu.7.7.C70-80";
+  //fileinput = std::string(FistSampler_INPUT_FOLDER) + "/input.AuAu.7.7.C0-5";
+
+  cout << fileinput << endl;
 
   run_parameters.parameters["ecm"] = 7.7;
+  //run_parameters.parameters["decays"] = 4;
 
   if (argc > 1) {
     fileinput = string(argv[1]);
@@ -375,9 +391,10 @@ int main(int argc, char* argv[]) {
 
   run_parameters.ReadParametersFromFile(fileinput);
   //run_parameters.hypersurface_file = std::string(FistSampler_INPUT_FOLDER) + "/hydro/AuAu7.7/C70-80/surface_eps_0.26.dat";
-
+  //run_parameters.hypersurface_file = "/Users/vlvovch/Code/fist-sampler/input/hydro/AuAu.7.7/C0-5/surface_eps_0.26.dat";
   // Force strong + EM decays
-  run_parameters.parameters["decays"] = 3;
+  run_parameters.parameters["decays"] = 4;
+
 
   if (argc > 2) {
     run_parameters.output_file = string(argv[2]);
@@ -457,7 +474,9 @@ int main(int argc, char* argv[]) {
 
     // Perform the decays, if necessary
     if (lround(run_parameters.parameters["decays"]) != 0) {
-      evt = EventGeneratorBase::PerformDecays(evt, TPS);
+      EventGeneratorBase::DecayerFlags decflags;
+      decflags.propagateParticles = true;
+      evt = EventGeneratorBase::PerformDecays(evt, TPS, decflags);
     }
 
     stats.ProcessEvent(evt, TPS);
