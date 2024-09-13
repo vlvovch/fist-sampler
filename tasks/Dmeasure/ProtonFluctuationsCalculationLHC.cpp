@@ -181,7 +181,7 @@ int main(int argc, char* argv[]) {
   //run_parameters.nevents = 1000;
   {
     int ind = fileinput.size() - 1;
-    while (ind > 0 && fileinput[ind] != '/' && fileinput[ind] != '\\') {
+    while (ind >= 0 && fileinput[ind] != '/' && fileinput[ind] != '\\') {
       ind--;
     }
     run_parameters.output_file = fileinput.substr(ind + 1);
