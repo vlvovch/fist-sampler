@@ -249,7 +249,7 @@ namespace FistSampler {
       instream >> tau >> x >> y >> eta >> ds0 >> ds1 >> ds2 >> ds3 >>
                   u0 >> u1 >> u2 >> u3 >> T >> muB >> muQ >> muS;
       for (int i=0; i<10; i++) instream >> elem.pi[i]; // pi_cart(10)
-      instream >> Pi  >> edens >> rhoB; // tmp = bulk pressure
+      instream >> Pi  >> edens >> rhoB;
       double u_sqr = u0 * u0 - u1 * u1 - u2 * u2 - u3 * u3;
 
       elem.edens = edens;

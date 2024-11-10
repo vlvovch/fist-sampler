@@ -59,6 +59,8 @@ namespace FistSampler {
         {"edens",   0.26},             // The energy density corresponding to the Cooper-Frye hypersurface
         {"use_idealHRG_for_means", 0}, // Use the ideal HRG model when evaluating mean hadron yields, faster initialization at moderate accuracy cost
         {"shear_correction", 0},       // Apply shear viscous corrections to the particle spectra
+        {"bulk_correction", 0},        // Apply bulk viscous corrections to the particle spectra
+        {"speed_of_sound_squared", 0.15}, // The value of the squared sound velocity used for bulk viscous corrections
         {"EVfastmode", 1}              // Use (or not) the SPR approximation when checking the hard-core overlap of particles. If on, keeps sampling the given particle until no overlap with other particles achieved, instead of rejecting all sampled particles and starting over.
         })
     {
