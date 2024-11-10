@@ -207,6 +207,9 @@ namespace FistSampler {
       // array[17] == (e + P) / T
       elem.P = (arr[17] * elem.T - elem.edens);
 
+      // Bulk pressure
+      elem.Pi = arr[28] / thermalfist::xMath::GeVtoifm();
+
       if (!fin.eof() && elem.T > 0.01) // As in iSS
         hypersurface.push_back(elem);
     }
