@@ -108,6 +108,8 @@ int main(int argc, char* argv[]) {
     event_writer = new EventWriter(run_parameters.output_file);
   else if (lround(run_parameters.parameters["output_format"]) == 1)
     event_writer = new EventWriterForUrqmd(run_parameters.output_file);
+  else if (lround(run_parameters.parameters["output_format"]) == 2)
+    event_writer = new EventWriterForSmash(run_parameters.output_file, TPS);
 
   ofstream fout_events(run_parameters.output_file);
 
@@ -121,7 +123,7 @@ int main(int argc, char* argv[]) {
   // Loop through the events
   for (long long event_number = 0; event_number < run_parameters.nevents; ++event_number) {
     // Sample the primordial hadrons
-    SimpleEvent evt = evtgen->GetEvent();
+    SimpleEvent evt = evtgen->GetEvent(false); // don't perform final decays here already
 
     // Perform the decays, if necessary
     if (lround(run_parameters.parameters["decays"]) != 0) {

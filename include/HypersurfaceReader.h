@@ -207,8 +207,86 @@ namespace FistSampler {
       // array[17] == (e + P) / T
       elem.P = (arr[17] * elem.T - elem.edens);
 
+      // Bulk pressure
+      elem.Pi = arr[28] / thermalfist::xMath::GeVtoifm();
+
       if (!fin.eof() && elem.T > 0.01) // As in iSS
         hypersurface.push_back(elem);
+    }
+  }
+
+  static void ReadParticlizationHypersurfaceVHLLE(const std::string& hypersurface_filename, 
+    thermalfist::ParticlizationHypersurface& hypersurface
+    ) {
+
+    std::ifstream fin(hypersurface_filename);
+
+    if (!fin.is_open()) {
+      std::cout << "Hypersurface file " << hypersurface_filename << " not found!" << std::endl;
+      return;
+    }
+
+    hypersurface.clear();
+
+    size_t line_counter = 0;
+    std::string line;
+    std::istringstream instream;
+
+    double dVeff = 0.0;
+
+    while (true){
+      if (fin.eof()) {
+        break;
+      }
+      getline(fin, line);
+      instream.str(line);
+      instream.seekg(0);
+      instream.clear();
+                  
+      thermalfist::ParticlizationHypersurfaceElement elem;
+
+      double ds0, ds1, ds2, ds3, u0, u1, u2, u3, T, muB, muS, muQ, tau, x, y,
+          eta, edens, rhoB, Pi;
+
+      // This so far only works with a hacked version in hammelmann/add_edens_rhoB_freezeout in the vhlle repo
+      instream >> tau >> x >> y >> eta >> ds0 >> ds1 >> ds2 >> ds3 >>
+                  u0 >> u1 >> u2 >> u3 >> T >> muB >> muQ >> muS;
+      for (int i=0; i<10; i++) instream >> elem.pi[i]; // pi_cart(10)
+      instream >> Pi  >> edens >> rhoB;
+      double u_sqr = u0 * u0 - u1 * u1 - u2 * u2 - u3 * u3;
+
+      elem.edens = edens;
+      elem.rhoB  = rhoB;
+
+      elem.T   = T;
+      elem.muB = muB;
+      elem.muQ = muQ;
+      elem.muS = muS;
+
+      elem.tau  = tau;
+      elem.x = x;
+      elem.y = y;
+      elem.eta = eta;
+      elem.Pi = Pi;
+
+      // transform everything to cartesian coordinates
+      elem.u[0] = u0;
+      elem.u[1] = u1;
+      elem.u[2] = u2;
+      elem.u[3] = u3;
+
+      elem.dsigma[0] = ds0;
+      elem.dsigma[1] = ds1;
+      elem.dsigma[2] = ds2;
+      elem.dsigma[3] = ds3;
+
+      double umu_dsigmamu_vhlle = u0 * ds0 + u1 * ds1 + u2 * ds2 + u3 * ds3;
+      dVeff += umu_dsigmamu_vhlle;
+      
+      line_counter++;
+      if (!fin.eof() && elem.T > 0.01){
+        hypersurface.push_back(elem);
+      }
     }
   }
 }
