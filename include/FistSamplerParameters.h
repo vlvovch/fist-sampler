@@ -65,6 +65,57 @@ namespace FistSampler {
         ReadParametersFromFile(input_file);
     }
 
+    void ReadParametersFromCommandLine(int argc, char* argv[]) {
+      int carg = 1;
+      if (argc > 1) {
+        // Check if the argument starts with "--"
+        // If not, read from file
+        if (!(std::string(argv[1]).find("--") == 0)) {
+          ReadParametersFromFile(argv[1]);
+          carg = 2;
+        }
+      }
+
+      // Read the rest of the parameters in a format --param=value and override the defaults
+      while (carg < argc) {
+        std::string arg(argv[carg]);
+        if (arg.find("--") == 0) {
+          arg = arg.substr(2);
+          size_t pos = arg.find('=');
+          if (pos != std::string::npos) {
+            std::string var = arg.substr(0, pos);
+            std::string val = arg.substr(pos + 1);
+
+            std::cout << "Reading input parameter " << var << " = " << val << std::endl;
+
+            if (var == "output_file") {
+              output_file = val;
+            }
+            else if (var == "randomseed") {
+              randomseed = std::stoi(val);
+            }
+            else if (var == "hypersurface_file") {
+              hypersurface_file = val;
+            }
+            else if (var == "particle_list_file") {
+              particle_list_file = val;
+            }
+            else if (var == "decays_list_file") {
+              decays_list_file = val;
+            }
+            else if (var == "nevents") {
+              nevents = std::stoll(val);
+            }
+            else {
+              parameters[var] = std::stod(val);
+            }
+
+          }
+        }
+        carg++;
+      }
+    }
+
     void ReadParametersFromFile(const std::string& filename) {
       std::ifstream fin(filename);
       if (fin.is_open()) {
