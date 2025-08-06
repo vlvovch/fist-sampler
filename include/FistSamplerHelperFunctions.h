@@ -100,7 +100,7 @@ namespace FistSampler {
   {
     int hypersurface_filetype = round(params.parameters["hypersurface_filetype"]);
 
-    if (hypersurface_filetype < 0 || hypersurface_filetype > 2) {
+    if (hypersurface_filetype < 0 || hypersurface_filetype > 3) {
       std::cout << "Invalid hypersurface input file type! Aborting..." << "\n";
       exit(1);
     }
@@ -110,6 +110,9 @@ namespace FistSampler {
     }
     else if (hypersurface_filetype == 2) {
       ReadParticlizationHypersurfaceMUSIC(params.hypersurface_file, hypersurface);
+    }
+    else if (hypersurface_filetype == 3) {
+      ReadParticlizationHypersurfaceVHLLE(params.hypersurface_file, hypersurface);
     }
   }
 
@@ -233,6 +236,11 @@ namespace FistSampler {
 
     bool shear_correction = (lround(run_parameters.parameters["shear_correction"]) != 0);
     evtgen->SetShearCorrection(shear_correction);
+
+    bool bulk_correction = (lround(run_parameters.parameters["bulk_correction"]) != 0);
+    double speed_of_sound_squared = (run_parameters.parameters["speed_of_sound_squared"]);
+    evtgen->SetBulkCorrection(bulk_correction);
+    evtgen->SetSpeedOfSoundSquared(speed_of_sound_squared);
 
     return evtgen;
   }

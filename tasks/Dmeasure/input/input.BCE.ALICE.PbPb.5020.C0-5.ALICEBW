@@ -1,4 +1,4 @@
-input.BQS.ALICE.PbPb.5020.C0-5.EVHRG.ALICEBW# Input parameters for the FIST sampler utilizing the blast-wave model for 2.76 TeV Pb-Pb collision at the LHC
+# Input parameters for the FIST sampler utilizing the blast-wave model for 2.76 TeV Pb-Pb collision at the LHC
 # Includes the effect of baryon excluded volume in the sampling procedure
 # Format: <parameter-name> <parameter-value>
 # Everything after # is ignored
@@ -7,7 +7,7 @@ input.BQS.ALICE.PbPb.5020.C0-5.EVHRG.ALICEBW# Input parameters for the FIST samp
 fist_sampler_mode 2   # 0 - Coarse-grained from file, 1 - Siemens-Rasmussen-Hubble, 2 - boost-invariant blast-wave
 
 # The number of events
-nevents 100000
+nevents 10000000
 
 # The random number generator seed
 randomseed 1
@@ -27,10 +27,10 @@ randomseed 1
 Bcanonical 1    # 0 - grand-canonical, 1 - canonical
 
 # Global conservation of electric charge
-Qcanonical 1    # 0 - grand-canonical, 1 - canonical
+Qcanonical 0    # 0 - grand-canonical, 1 - canonical
 
 # Global conservation of strangeness
-Scanonical 1    # 0 - grand-canonical, 1 - canonical
+Scanonical 0    # 0 - grand-canonical, 1 - canonical
 
 # Global conservation of charm
 Ccanonical 0    # 0 - grand-canonical, 1 - canonical
@@ -71,7 +71,7 @@ BW_n      0.735   # Radial flow profile
 BW_etamax 5.1     # Space-time rapidity cut-off
 
 # The output file name for the generated events (absolute or relative path)
-output_file Dmeasure.BQS.ALICEBW.PbPb.5020.C0-5.EVHRG.dat
+output_file Dmeasure.BCE.ALICEBW.PbPb.5020.C0-5.dat
 
 # The output format
 # 0 - FIST ascii
@@ -80,4 +80,4 @@ output_file Dmeasure.BQS.ALICEBW.PbPb.5020.C0-5.EVHRG.dat
 output_format 2
 
 # Excluded volume parameter (in fm^3)
-b 1.0
+b 0.0

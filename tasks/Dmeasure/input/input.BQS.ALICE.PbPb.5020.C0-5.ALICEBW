@@ -1,4 +1,4 @@
-input.BQS.ALICE.PbPb.5020.C0-5.EVHRG.ALICEBW# Input parameters for the FIST sampler utilizing the blast-wave model for 2.76 TeV Pb-Pb collision at the LHC
+# Input parameters for the FIST sampler utilizing the blast-wave model for 2.76 TeV Pb-Pb collision at the LHC
 # Includes the effect of baryon excluded volume in the sampling procedure
 # Format: <parameter-name> <parameter-value>
 # Everything after # is ignored
@@ -80,4 +80,4 @@ output_file Dmeasure.BQS.ALICEBW.PbPb.5020.C0-5.EVHRG.dat
 output_format 2
 
 # Excluded volume parameter (in fm^3)
-b 1.0
+b 0.0

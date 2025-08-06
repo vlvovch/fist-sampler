@@ -62,8 +62,8 @@ Then, to sample Au-Au collisions at 7.7 GeV run
 This should generate 1000 collisions with the canonical treatment of baryon number in ascii output file `AuAu.7.7.C0-5.events.dat`
 
 The [input](input) folder contains also other systems.
-For instance, [input.HADES.AuAu.2.4.C0-5](input.HADES.AuAu.2.4.C0-5) and [input.HADES.AuAu.2.4.C0-5.EVHRG](input.HADES.AuAu.2.4.C0-5.EVHRG) correspond to Siemens-Rasmussen-Hubble model based event generator of 0-5% central 2.4 GeV Au-Au collisions corresponding to the HADES experiment, with and without the excluded volume effect, respectively.
-On other hand, [input.ALICE.PbPb.2760.C0-5](input.ALICE.PbPb.2760.C0-5) and [input.ALICE.PbPb.2760.C0-5.EVHRG](input.ALICE.PbPb.2760.C0-5.EVHRG) correspond to blast-wave model based event generator of 0-5% 2.76 TeV Pb-Pb collisions.
+For instance, [input/input.HADES.AuAu.2.4.C0-5](input/input.HADES.AuAu.2.4.C0-5) and [input/input.HADES.AuAu.2.4.C0-5.EVHRG](input/input.HADES.AuAu.2.4.C0-5.EVHRG) correspond to Siemens-Rasmussen-Hubble model based event generator of 0-5% central 2.4 GeV Au-Au collisions corresponding to the HADES experiment, with and without the excluded volume effect, respectively.
+On other hand, [input/input.ALICE.PbPb.2760.C0-5](input/input.ALICE.PbPb.2760.C0-5) and [input/input.ALICE.PbPb.2760.C0-5.EVHRG](input/input.ALICE.PbPb.2760.C0-5.EVHRG) correspond to blast-wave model based event generator of 0-5% 2.76 TeV Pb-Pb collisions.
 
 ## Attribution
 Publications using this sampler should include a reference to the **Thermal-FIST** package

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <functional>
+#include <limits>
 #include "HRGEventGenerator.h"
 
 #if defined(__linux__) || defined(__APPLE__)
@@ -51,13 +52,15 @@ namespace FistSampler {
         {"finite_widths",        0},   // Resonance widths treatment: 0 - zero width, 1 - energy-dependent Breit-Wigner
         {"hypersurface_filetype",2},   // 0 - Native ascii, 1 - Native binary, 2 - MUSIC binary
         {"decays", 1},                 // 0 - no decays, 1 - use the stability flags from the list, 2 - strong decays, 3 - strong + electromagnetic, 4 - strong + electromagnetic + weak decays (pi-K-p in the final state), 10 - match the particle list from UrQMD
-        {"output_format", 0},          // 0 - native ascii, 1 - tailored for UrQMD afterburner at https://github.com/jbernhard/urqmd-afterburner
+        {"output_format", 0},          // 0 - native ascii, 1 - tailored for UrQMD afterburner at https://github.com/jbernhard/urqmd-afterburner, 2 - tailored for SMASH afterburner
         {"b",     0.},                 // Excluded volume parameter for baryons (in fm^3)
         {"radB", -1.},                 // Baryon hard-core radius (in fm). If negative (default), its value is inferred from excluded-volume parameter b
         {"rescaleTmu", 0},             // Rescale the values of T and mu to match energy and baryon densities from hydro, most relevant when EV-HRG model used, less so for Id-HRG. Note that the hypersurface MUST correspond to constant energy density of edens
         {"edens",   0.26},             // The energy density corresponding to the Cooper-Frye hypersurface
         {"use_idealHRG_for_means", 0}, // Use the ideal HRG model when evaluating mean hadron yields, faster initialization at moderate accuracy cost
         {"shear_correction", 0},       // Apply shear viscous corrections to the particle spectra
+        {"bulk_correction", 0},        // Apply bulk viscous corrections to the particle spectra
+        {"speed_of_sound_squared", 0.15}, // The value of the squared sound velocity used for bulk viscous corrections
         {"EVfastmode", 1}              // Use (or not) the SPR approximation when checking the hard-core overlap of particles. If on, keeps sampling the given particle until no overlap with other particles achieved, instead of rejecting all sampled particles and starting over.
         })
     {
