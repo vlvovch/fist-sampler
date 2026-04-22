@@ -15,6 +15,7 @@ input/*events.dat*
 
 # # Large hydrodynamic files (except the example)
 input/hydro/*/*/*.dat
+input/hydro/*/*/*.dat.*
 !input/hydro/AuAu.7.7/C70-80/surface_eps_0.26.dat
 
 
@@ -32,3 +33,9 @@ cmake-build-*/*
 
 # Mac OS
 .DS_Store
+
+# Editor / LSP caches
+.cache/
+
+# Local results
+results/*

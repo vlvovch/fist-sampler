@@ -54,6 +54,8 @@ vector<NchAcceptance> nch_acceptances = {
         {0.6, 5.0, eta_iters, dEta}
 };
 
+// Ratio of local over global conservation volume
+double V4piOverVc = 1.0;
 
 // Process a single event
 void ProcessEventForDmeasure(const SimpleEvent& event, SampleMoments::NumberStatistics& statsNchtot, vector<vector<SampleMoments::TwoNumberStatistics>>& allstatsNetSum) {
@@ -123,7 +125,7 @@ void WriteDmeasureResultsSingle(ofstream& file, SampleMoments::NumberStatistics&
     double Derror = 4. * statsNetSum[ieta].GetJointCumulantRatioError(2, 0, 0, 1);
     file << setw(15) << D << " ";
     file << setw(15) << Derror << " ";
-    double alphach = statsNetSum[ieta].GetMean2() / statsNchtot.GetMean();
+    double alphach = statsNetSum[ieta].GetMean2() / statsNchtot.GetMean() / V4piOverVc;
     file << setw(15) << alphach << " ";
     double Dprime = D + 4. * alphach;
     double Dprimeerror = Derror;
@@ -179,6 +181,11 @@ int main(int argc, char* argv[]) {
   if (argc > 2) {
     run_parameters.output_file = string(argv[2]);
   }
+
+  if (run_parameters.parameters.count("global_etamax") == 0 && run_parameters.parameters.count("BW_etamax") > 0) {
+    run_parameters.parameters["global_etamax"] = run_parameters.parameters["BW_etamax"];
+  }
+  V4piOverVc = run_parameters.parameters["global_etamax"] / (run_parameters.parameters["BW_etamax"]);
 
   // Output the values of all the parameters used
   run_parameters.OutputParameters();

@@ -6,7 +6,7 @@ set (CMAKE_CXX_STANDARD 11)
 
 # The version number.
 set (FistSampler_VERSION_MAJOR 1)
-set (FistSampler_VERSION_MINOR 0)
+set (FistSampler_VERSION_MINOR 1)
 
 #include_directories ("${PROJECT_SOURCE_DIR}/include" "${PROJECT_BINARY_DIR}/include")
 
