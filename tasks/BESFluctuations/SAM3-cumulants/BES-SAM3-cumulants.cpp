@@ -60,6 +60,11 @@ public:
   // Cross-cumulants of accepted pbar with 4pi charges
   vector<TwoNumberStatistics> statsPbarB, statsPbarQ, statsPbarS;
 
+  // Joint statistics of net-proton X = N_p - N_pbar and 4pi baryon number B,
+  // used both for direct-MC net-proton cumulants and for the SAM-3.0
+  // B-canonical correction to κ_n[X].
+  vector<TwoNumberStatistics> statsXB;
+
   // --- 4pi charge statistics (acceptance-independent) ---
 
   // Charge pairs: cov(B,Q), cov(B,S), cov(Q,S)
@@ -80,77 +85,285 @@ public:
     statsPbarB.resize(nbins);
     statsPbarQ.resize(nbins);
     statsPbarS.resize(nbins);
+    statsXB.resize(nbins);
   }
 
 
-  /// Process a primordial event: compute 4pi charges before decays,
-  /// then perform decays and count accepted p/pbar from final state.
-  /// This ensures conserved charges (especially S) are not affected by
-  /// weak decays that can violate strangeness conservation.
-  void ProcessEvent(const SimpleEvent& evt, ThermalParticleSystem& TPS, int decays) {
-    nevents++;
+  /// Per-event summary: prefix-summed Np/Npbar over rapidity bins and 4pi charges.
+  /// Shared across multiple processors (e.g. jackknife blocks) so that the
+  /// expensive decay step is done only once per event.
+  struct EventData {
+    vector<int> Np;
+    vector<int> Npbar;
+    int Btot = 0;
+    int Qtot = 0;
+    int Stot = 0;
+  };
 
-    int nbins = m_nsubs / 2;
-    vector<int> Np(nbins, 0), Npbar(nbins, 0);
-    int Btot = 0, Qtot = 0, Stot = 0;
+  /// Expensive step: perform decays, bin accepted p/pbar, sum 4pi charges
+  /// (computed before decays so weak decays don't leak S conservation).
+  static EventData ComputeEventData(const SimpleEvent& evt, ThermalParticleSystem& TPS,
+                                    int decays, int nsubs, double dY,
+                                    double pTmin, double pTmax) {
+    int nbins = nsubs / 2;
+    EventData ed;
+    ed.Np.assign(nbins, 0);
+    ed.Npbar.assign(nbins, 0);
 
-    // 4pi conserved charges from primordial particles (before decays)
     for (const SimpleParticle& part : evt.Particles) {
       const ThermalParticle& prop = TPS.ParticleByPDG(part.PDGID);
-      Btot += prop.BaryonCharge();
-      Qtot += prop.ElectricCharge();
-      Stot += prop.Strangeness();
+      ed.Btot += prop.BaryonCharge();
+      ed.Qtot += prop.ElectricCharge();
+      ed.Stot += prop.Strangeness();
     }
 
-    // Perform decays
     SimpleEvent evt_final = evt;
     if (decays != 0) {
       evt_final = EventGeneratorBase::PerformDecays(evt, &TPS);
     }
 
-    // Accepted protons/antiprotons from final-state particles (after decays)
     for (const SimpleParticle& part : evt_final.Particles) {
       double pT = part.GetPt();
-      if (pT >= m_pTmin && pT <= m_pTmax) {
-        int tindY = floor(abs(part.GetY()) / m_dY);
+      if (pT >= pTmin && pT <= pTmax) {
+        int tindY = floor(abs(part.GetY()) / dY);
         if (tindY >= 0 && tindY < nbins) {
           if (part.PDGID == 2212)
-            Np[tindY]++;
+            ed.Np[tindY]++;
           if (part.PDGID == -2212)
-            Npbar[tindY]++;
+            ed.Npbar[tindY]++;
         }
       }
     }
 
-    // Prefix sums: bin i -> |y| < (i+1)*dY
     for (int i = 1; i < nbins; ++i) {
-      Np[i] += Np[i - 1];
-      Npbar[i] += Npbar[i - 1];
+      ed.Np[i]    += ed.Np[i - 1];
+      ed.Npbar[i] += ed.Npbar[i - 1];
     }
+    return ed;
+  }
 
-    // Fill acceptance-dependent statistics
+  /// Cheap step: fold a pre-computed event into this processor's statistics.
+  void AddEventData(const EventData& ed) {
+    nevents++;
+    int nbins = m_nsubs / 2;
     for (int isub = 0; isub < nbins; ++isub) {
-      statsPPbar[isub].AddObservation(Np[isub], Npbar[isub]);
-
-      statsPB[isub].AddObservation(Np[isub], Btot);
-      statsPQ[isub].AddObservation(Np[isub], Qtot);
-      statsPS[isub].AddObservation(Np[isub], Stot);
-
-      statsPbarB[isub].AddObservation(Npbar[isub], Btot);
-      statsPbarQ[isub].AddObservation(Npbar[isub], Qtot);
-      statsPbarS[isub].AddObservation(Npbar[isub], Stot);
+      statsPPbar[isub].AddObservation(ed.Np[isub], ed.Npbar[isub]);
+      statsPB[isub].AddObservation(ed.Np[isub], ed.Btot);
+      statsPQ[isub].AddObservation(ed.Np[isub], ed.Qtot);
+      statsPS[isub].AddObservation(ed.Np[isub], ed.Stot);
+      statsPbarB[isub].AddObservation(ed.Npbar[isub], ed.Btot);
+      statsPbarQ[isub].AddObservation(ed.Npbar[isub], ed.Qtot);
+      statsPbarS[isub].AddObservation(ed.Npbar[isub], ed.Stot);
+      statsXB   [isub].AddObservation(ed.Np[isub] - ed.Npbar[isub], ed.Btot);
     }
+    statsBQ.AddObservation(ed.Btot, ed.Qtot);
+    statsBS.AddObservation(ed.Btot, ed.Stot);
+    statsQS.AddObservation(ed.Qtot, ed.Stot);
+    statsB.AddObservation(ed.Btot);
+    statsQ.AddObservation(ed.Qtot);
+    statsS.AddObservation(ed.Stot);
+  }
 
-    // 4pi charge correlations
-    statsBQ.AddObservation(Btot, Qtot);
-    statsBS.AddObservation(Btot, Stot);
-    statsQS.AddObservation(Qtot, Stot);
-
-    statsB.AddObservation(Btot);
-    statsQ.AddObservation(Qtot);
-    statsS.AddObservation(Stot);
+  /// Backward-compatible single-call interface.
+  void ProcessEvent(const SimpleEvent& evt, ThermalParticleSystem& TPS, int decays) {
+    EventData ed = ComputeEventData(evt, TPS, decays, m_nsubs, m_dY, m_pTmin, m_pTmax);
+    AddEventData(ed);
   }
 };
+
+
+// ============================================================
+// SAM-3.0 value container — one entry per ensemble per y-bin.
+// Ensembles (index 0..6): gce, Bcan, Qcan, Scan, BQcan, BScan, BQScan.
+// Used both for central values and for per-block jackknife samples.
+// ============================================================
+constexpr int N_SAM3_ENSEMBLES = 7;
+inline const string& SAM3EnsembleName(int i) {
+  static const string names[N_SAM3_ENSEMBLES] = {
+    "gce", "Bcan", "Qcan", "Scan", "BQcan", "BScan", "BQScan"
+  };
+  return names[i];
+}
+
+struct SAM3Cumulants {
+  int nbins = 0;
+  vector<double> meanNp, meanNpb;               // [nbins]
+  vector<vector<double>> k2p, k2pb, k11;        // [7][nbins]
+  // Direct-MC cumulant ratios κ_3/κ_1 and κ_4/κ_2 for p and p̄.
+  // Not SAM-3.0 corrected; per-bin only.
+  vector<double> r_k3k1_p, r_k4k2_p;            // [nbins]
+  vector<double> r_k3k1_pb, r_k4k2_pb;          // [nbins]
+  // Direct-MC net-proton ratios for X = N_p − N_pbar.
+  vector<double> r_k2X_skell, r_k3X_k1X, r_k4X_k2X;  // [nbins]
+};
+
+// Compute all SAM-3.0 corrected 2nd-order cumulants for a given processor.
+// Returns an empty (nbins=0) result if fewer than 2 events have been added.
+static SAM3Cumulants ComputeSAM3Cumulants(EventsProcessorSAM3& stats) {
+  SAM3Cumulants out;
+  if (stats.nevents < 2) return out;
+
+  int nbins = stats.m_nsubs / 2;
+  out.nbins = nbins;
+  out.meanNp.assign(nbins, 0.);
+  out.meanNpb.assign(nbins, 0.);
+  out.k2p .assign(N_SAM3_ENSEMBLES, vector<double>(nbins, 0.));
+  out.k2pb.assign(N_SAM3_ENSEMBLES, vector<double>(nbins, 0.));
+  out.k11 .assign(N_SAM3_ENSEMBLES, vector<double>(nbins, 0.));
+  out.r_k3k1_p .assign(nbins, 0.);
+  out.r_k4k2_p .assign(nbins, 0.);
+  out.r_k3k1_pb.assign(nbins, 0.);
+  out.r_k4k2_pb.assign(nbins, 0.);
+  out.r_k2X_skell.assign(nbins, 0.);
+  out.r_k3X_k1X  .assign(nbins, 0.);
+  out.r_k4X_k2X  .assign(nbins, 0.);
+
+  double varB  = stats.statsB.GetCentralMoment(2);
+  double varQ  = stats.statsQ.GetCentralMoment(2);
+  double varS  = stats.statsS.GetCentralMoment(2);
+  double covBQ = stats.statsBQ.GetJointCentralMoment(1, 1);
+  double covBS = stats.statsBS.GetJointCentralMoment(1, 1);
+  double covQS = stats.statsQS.GetJointCentralMoment(1, 1);
+
+  double K[3][3] = {
+    {varB,  covBQ, covBS},
+    {covBQ, varQ,  covQS},
+    {covBS, covQS, varS}
+  };
+
+  auto invertSubmatrix = [&K](const vector<int>& idx) -> vector<double> {
+    int N = (int)idx.size();
+    if (N == 1) return {1.0 / K[idx[0]][idx[0]]};
+    if (N == 2) {
+      double a = K[idx[0]][idx[0]], b = K[idx[0]][idx[1]];
+      double d = K[idx[1]][idx[1]];
+      double det = a * d - b * b;
+      return {d / det, -b / det, -b / det, a / det};
+    }
+    double M[3][3];
+    for (int i = 0; i < 3; ++i)
+      for (int j = 0; j < 3; ++j)
+        M[i][j] = K[idx[i]][idx[j]];
+    double det = M[0][0] * (M[1][1]*M[2][2] - M[1][2]*M[2][1])
+               - M[0][1] * (M[1][0]*M[2][2] - M[1][2]*M[2][0])
+               + M[0][2] * (M[1][0]*M[2][1] - M[1][1]*M[2][0]);
+    vector<double> inv(9);
+    inv[0] =  (M[1][1]*M[2][2] - M[1][2]*M[2][1]) / det;
+    inv[1] = -(M[0][1]*M[2][2] - M[0][2]*M[2][1]) / det;
+    inv[2] =  (M[0][1]*M[1][2] - M[0][2]*M[1][1]) / det;
+    inv[3] = -(M[1][0]*M[2][2] - M[1][2]*M[2][0]) / det;
+    inv[4] =  (M[0][0]*M[2][2] - M[0][2]*M[2][0]) / det;
+    inv[5] = -(M[0][0]*M[1][2] - M[0][2]*M[1][0]) / det;
+    inv[6] =  (M[1][0]*M[2][1] - M[1][1]*M[2][0]) / det;
+    inv[7] = -(M[0][0]*M[2][1] - M[0][1]*M[2][0]) / det;
+    inv[8] =  (M[0][0]*M[1][1] - M[0][1]*M[1][0]) / det;
+    return inv;
+  };
+
+  // Scenarios in the order matching SAM3EnsembleName() (indices 1..6).
+  vector<vector<int>> scen_idx = {
+    {0}, {1}, {2},
+    {0, 1}, {0, 2},
+    {0, 1, 2}
+  };
+  vector<vector<double>> Kinvs(scen_idx.size());
+  for (size_t i = 0; i < scen_idx.size(); ++i)
+    Kinvs[i] = invertSubmatrix(scen_idx[i]);
+
+  auto correction = [](const vector<double>& Kinv, const vector<int>& idx,
+                        const double cpi[3], const double cpj[3]) -> double {
+    int N = (int)idx.size();
+    double r = 0.;
+    for (int a = 0; a < N; ++a)
+      for (int b = 0; b < N; ++b)
+        r += cpi[idx[a]] * Kinv[a * N + b] * cpj[idx[b]];
+    return r;
+  };
+
+  for (int isub = 0; isub < nbins; ++isub) {
+    auto& ppbar = stats.statsPPbar[isub];
+    out.meanNp[isub]  = ppbar.GetMean1();
+    out.meanNpb[isub] = ppbar.GetMean2();
+
+    double varNp    = ppbar.GetJointCumulant(2, 0);
+    double varNpb   = ppbar.GetJointCumulant(0, 2);
+    double covNpNpb = ppbar.GetJointCumulant(1, 1);
+
+    double cpNp[3]  = {
+      stats.statsPB[isub].GetJointCumulant(1, 1),
+      stats.statsPQ[isub].GetJointCumulant(1, 1),
+      stats.statsPS[isub].GetJointCumulant(1, 1)
+    };
+    double cpNpb[3] = {
+      stats.statsPbarB[isub].GetJointCumulant(1, 1),
+      stats.statsPbarQ[isub].GetJointCumulant(1, 1),
+      stats.statsPbarS[isub].GetJointCumulant(1, 1)
+    };
+
+    // GCE (ensemble 0): no correction
+    out.k2p [0][isub] = varNp;
+    out.k2pb[0][isub] = varNpb;
+    out.k11 [0][isub] = covNpNpb;
+
+    // 6 SAM-3.0-corrected scenarios (ensembles 1..6)
+    for (size_t iS = 0; iS < scen_idx.size(); ++iS) {
+      double dVarNp    = correction(Kinvs[iS], scen_idx[iS], cpNp,  cpNp);
+      double dVarNpb   = correction(Kinvs[iS], scen_idx[iS], cpNpb, cpNpb);
+      double dCovNpNpb = correction(Kinvs[iS], scen_idx[iS], cpNp,  cpNpb);
+
+      out.k2p [iS + 1][isub] = varNp    - dVarNp;
+      out.k2pb[iS + 1][isub] = varNpb   - dVarNpb;
+      out.k11 [iS + 1][isub] = covNpNpb - dCovNpNpb;
+    }
+
+    // Direct-MC k3/k1 and k4/k2 ratios (ensemble-independent).
+    out.r_k3k1_p [isub] = ppbar.GetJointCumulantRatio(3, 0, 1, 0);
+    out.r_k4k2_p [isub] = ppbar.GetJointCumulantRatio(4, 0, 2, 0);
+    out.r_k3k1_pb[isub] = ppbar.GetJointCumulantRatio(0, 3, 0, 1);
+    out.r_k4k2_pb[isub] = ppbar.GetJointCumulantRatio(0, 4, 0, 2);
+
+    // Direct-MC net-proton ratios (from statsXB).
+    auto& sXB = stats.statsXB[isub];
+    double skellam = ppbar.GetMean1() + ppbar.GetMean2();
+    out.r_k2X_skell[isub] = (skellam > 0.) ? sXB.GetJointCumulant(2, 0) / skellam : 0.;
+    out.r_k3X_k1X  [isub] = sXB.GetJointCumulantRatio(3, 0, 1, 0);
+    out.r_k4X_k2X  [isub] = sXB.GetJointCumulantRatio(4, 0, 2, 0);
+  }
+  return out;
+}
+
+
+// ============================================================
+// SAM-3.0 B-canonical correction for 2nd-4th cumulants of a single
+// observable N, derived via saddle-point from the joint (N, B) CGF at
+// fixed B = <B>.  Single-charge specialization; requires κ^gce_{02}[B] ≠ 0.
+//
+//   A  = κ_{11}/κ_{02},   M = κ_{21} − 2 κ_{12} A + κ_{03} A²
+//   κ̃_2 = κ_{20} − κ_{11}²/κ_{02}
+//   κ̃_3 = κ_{30} − 3 κ_{21} A + 3 κ_{12} A² − κ_{03} A³
+//   κ̃_4 = κ_{40} − 4 κ_{31} A + 6 κ_{22} A² − 4 κ_{13} A³ + κ_{04} A⁴
+//          − 3 M²/κ_{02}
+//
+// Indexing κ_{ij}: i derivatives w.r.t. N, j w.r.t. B.
+// ============================================================
+struct SAM3HigherOrderBcan { double k2, k3, k4; };
+
+static SAM3HigherOrderBcan SAM3BcanK2K3K4(
+    double kN2, double kN3, double kN4,
+    double kB2, double kB3, double kB4,
+    double k11, double k21, double k12,
+    double k31, double k13, double k22)
+{
+  double A  = k11 / kB2;
+  double A2 = A * A, A3 = A2 * A, A4 = A2 * A2;
+  double M  = k21 - 2.0 * k12 * A + kB3 * A2;
+  SAM3HigherOrderBcan r;
+  r.k2 = kN2 - k11 * k11 / kB2;
+  r.k3 = kN3 - 3.0 * k21 * A + 3.0 * k12 * A2 - kB3 * A3;
+  r.k4 = kN4 - 4.0 * k31 * A + 6.0 * k22 * A2 - 4.0 * k13 * A3 + kB4 * A4
+             - 3.0 * M * M / kB2;
+  return r;
+}
 
 
 // ============================================================
@@ -227,6 +440,20 @@ void WriteToFile(const string& prefix, EventsProcessorSAM3& stats) {
        << setw(w) << "<B>"          << setw(w) << "<Q>"          << setw(w) << "<S>"
        << setw(w) << "var(B)"       << setw(w) << "cov(B,Q)"     << setw(w) << "cov(B,S)"
        << setw(w) << "var(Q)"       << setw(w) << "cov(Q,S)"     << setw(w) << "var(S)"
+       << setw(w) << "k3(Np)"       << setw(w) << "k3(Np)_err"
+       << setw(w) << "k4(Np)"       << setw(w) << "k4(Np)_err"
+       << setw(w) << "k3(Npb)"      << setw(w) << "k3(Npb)_err"
+       << setw(w) << "k4(Npb)"      << setw(w) << "k4(Npb)_err"
+       << setw(w) << "k3Np/k1Np"    << setw(w) << "k3Np/k1Np_er"
+       << setw(w) << "k4Np/k2Np"    << setw(w) << "k4Np/k2Np_er"
+       << setw(w) << "k3Npb/k1Npb"  << setw(w) << "k3NpbK1Npb_e"
+       << setw(w) << "k4Npb/k2Npb"  << setw(w) << "k4NpbK2Npb_e"
+       << setw(w) << "k2(X)"        << setw(w) << "k2(X)_err"
+       << setw(w) << "k3(X)"        << setw(w) << "k3(X)_err"
+       << setw(w) << "k4(X)"        << setw(w) << "k4(X)_err"
+       << setw(w) << "k2X/Skellam"  << setw(w) << "k2XSkell_err"
+       << setw(w) << "k3X/k1X"      << setw(w) << "k3X/k1X_err"
+       << setw(w) << "k4X/k2X"      << setw(w) << "k4X/k2X_err"
        << endl;
 
   // ---- Data rows ----
@@ -262,6 +489,46 @@ void WriteToFile(const string& prefix, EventsProcessorSAM3& stats) {
     double covNpbS      = stats.statsPbarS[isub].GetJointCumulant(1, 1);
     double covNpbSErr   = stats.statsPbarS[isub].GetJointCumulantError(1, 1);
 
+    // ---- 3rd and 4th cumulants of N_p, N_pbar + ratios k3/k1, k4/k2 ----
+    double k3Np       = ppbar.GetJointCumulant(3, 0);
+    double k3NpErr    = ppbar.GetJointCumulantError(3, 0);
+    double k4Np       = ppbar.GetJointCumulant(4, 0);
+    double k4NpErr    = ppbar.GetJointCumulantError(4, 0);
+    double k3Npb      = ppbar.GetJointCumulant(0, 3);
+    double k3NpbErr   = ppbar.GetJointCumulantError(0, 3);
+    double k4Npb      = ppbar.GetJointCumulant(0, 4);
+    double k4NpbErr   = ppbar.GetJointCumulantError(0, 4);
+
+    double k3k1_p     = ppbar.GetJointCumulantRatio     (3, 0, 1, 0);
+    double k3k1_pErr  = ppbar.GetJointCumulantRatioError(3, 0, 1, 0);
+    double k4k2_p     = ppbar.GetJointCumulantRatio     (4, 0, 2, 0);
+    double k4k2_pErr  = ppbar.GetJointCumulantRatioError(4, 0, 2, 0);
+    double k3k1_pb    = ppbar.GetJointCumulantRatio     (0, 3, 0, 1);
+    double k3k1_pbErr = ppbar.GetJointCumulantRatioError(0, 3, 0, 1);
+    double k4k2_pb    = ppbar.GetJointCumulantRatio     (0, 4, 0, 2);
+    double k4k2_pbErr = ppbar.GetJointCumulantRatioError(0, 4, 0, 2);
+
+    // Net-proton X = N_p − N_pbar: raw cumulants (from statsXB) plus three
+    // ratios.  k3X/k1X and k4X/k2X use the correlation-aware ratio error;
+    // Skellam = <N_p> + <N_pbar> is effectively exact (1st moments), so the
+    // naive propagated error is fine.
+    auto& sXB = stats.statsXB[isub];
+    double k2X        = sXB.GetJointCumulant(2, 0);
+    double k2XErr     = sXB.GetJointCumulantError(2, 0);
+    double k3X        = sXB.GetJointCumulant(3, 0);
+    double k3XErr     = sXB.GetJointCumulantError(3, 0);
+    double k4X        = sXB.GetJointCumulant(4, 0);
+    double k4XErr     = sXB.GetJointCumulantError(4, 0);
+
+    double skellam      = meanNp + meanNpb;
+    double k2X_skell    = (skellam > 0.) ? k2X     / skellam : 0.;
+    double k2X_skellErr = (skellam > 0.) ? k2XErr  / skellam : 0.;
+
+    double k3X_k1X    = sXB.GetJointCumulantRatio     (3, 0, 1, 0);
+    double k3X_k1XErr = sXB.GetJointCumulantRatioError(3, 0, 1, 0);
+    double k4X_k2X    = sXB.GetJointCumulantRatio     (4, 0, 2, 0);
+    double k4X_k2XErr = sXB.GetJointCumulantRatioError(4, 0, 2, 0);
+
     fout << setw(w) << ycut
          << setw(w) << meanNp     << setw(w) << meanNpErr
          << setw(w) << meanNpb    << setw(w) << meanNpbErr
@@ -277,6 +544,20 @@ void WriteToFile(const string& prefix, EventsProcessorSAM3& stats) {
          << setw(w) << meanB      << setw(w) << meanQ      << setw(w) << meanS
          << setw(w) << varB       << setw(w) << covBQ      << setw(w) << covBS
          << setw(w) << varQ       << setw(w) << covQS      << setw(w) << varS
+         << setw(w) << k3Np       << setw(w) << k3NpErr
+         << setw(w) << k4Np       << setw(w) << k4NpErr
+         << setw(w) << k3Npb      << setw(w) << k3NpbErr
+         << setw(w) << k4Npb      << setw(w) << k4NpbErr
+         << setw(w) << k3k1_p     << setw(w) << k3k1_pErr
+         << setw(w) << k4k2_p     << setw(w) << k4k2_pErr
+         << setw(w) << k3k1_pb    << setw(w) << k3k1_pbErr
+         << setw(w) << k4k2_pb    << setw(w) << k4k2_pbErr
+         << setw(w) << k2X         << setw(w) << k2XErr
+         << setw(w) << k3X         << setw(w) << k3XErr
+         << setw(w) << k4X         << setw(w) << k4XErr
+         << setw(w) << k2X_skell   << setw(w) << k2X_skellErr
+         << setw(w) << k3X_k1X     << setw(w) << k3X_k1XErr
+         << setw(w) << k4X_k2X     << setw(w) << k4X_k2XErr
          << endl;
   }
 
@@ -293,7 +574,8 @@ void WriteToFile(const string& prefix, EventsProcessorSAM3& stats) {
 // for different canonical scenarios:
 //   B-can, Q-can, S-can, BQ-can, BS-can, BQS-can
 // ============================================================
-void WriteSAM3CorrectedFile(const string& prefix, EventsProcessorSAM3& stats) {
+void WriteSAM3CorrectedFile(const string& prefix, EventsProcessorSAM3& stats,
+                            bool gce_mode = false) {
   ofstream fout;
   int w = 15;
 
@@ -426,6 +708,14 @@ void WriteSAM3CorrectedFile(const string& prefix, EventsProcessorSAM3& stats) {
          << setw(w) << ("k2pb_" + sc.name)
          << setw(w) << ("k11_" + sc.name);
   }
+  if (gce_mode) {
+    fout << setw(w) << "k3p_gce"     << setw(w) << "k4p_gce"
+         << setw(w) << "k3pb_gce"    << setw(w) << "k4pb_gce"
+         << setw(w) << "k3p_Bcan"    << setw(w) << "k4p_Bcan"
+         << setw(w) << "k3pb_Bcan"   << setw(w) << "k4pb_Bcan"
+         << setw(w) << "k2X_gce"     << setw(w) << "k3X_gce"    << setw(w) << "k4X_gce"
+         << setw(w) << "k2X_Bcan"    << setw(w) << "k3X_Bcan"   << setw(w) << "k4X_Bcan";
+  }
   fout << endl;
 
   // ---- Data rows ----
@@ -475,6 +765,210 @@ void WriteSAM3CorrectedFile(const string& prefix, EventsProcessorSAM3& stats) {
            << setw(w) << (varNpb   - dVarNpb)
            << setw(w) << (covNpNpb - dCovNpNpb);
     }
+
+    if (gce_mode) {
+      // GCE cumulants of N_p, N_pbar and X = N_p − N_pbar (direct from sample).
+      double k3p_gce  = ppbar.GetJointCumulant(3, 0);
+      double k4p_gce  = ppbar.GetJointCumulant(4, 0);
+      double k3pb_gce = ppbar.GetJointCumulant(0, 3);
+      double k4pb_gce = ppbar.GetJointCumulant(0, 4);
+
+      auto& sXB = stats.statsXB[isub];
+      double k2X_gce = sXB.GetJointCumulant(2, 0);
+      double k3X_gce = sXB.GetJointCumulant(3, 0);
+      double k4X_gce = sXB.GetJointCumulant(4, 0);
+
+      // Joint cumulants with 4π baryon charge B (κ_{i,j} = ∂^i_N ∂^j_B K).
+      auto& sPB  = stats.statsPB [isub];
+      auto& sPbB = stats.statsPbarB[isub];
+
+      double kB2  = varB;
+      double kB3  = stats.statsB.GetCumulant(3);
+      double kB4  = stats.statsB.GetCumulant(4);
+
+      double pB_11 = sPB.GetJointCumulant(1, 1);
+      double pB_21 = sPB.GetJointCumulant(2, 1);
+      double pB_12 = sPB.GetJointCumulant(1, 2);
+      double pB_31 = sPB.GetJointCumulant(3, 1);
+      double pB_13 = sPB.GetJointCumulant(1, 3);
+      double pB_22 = sPB.GetJointCumulant(2, 2);
+
+      double pbB_11 = sPbB.GetJointCumulant(1, 1);
+      double pbB_21 = sPbB.GetJointCumulant(2, 1);
+      double pbB_12 = sPbB.GetJointCumulant(1, 2);
+      double pbB_31 = sPbB.GetJointCumulant(3, 1);
+      double pbB_13 = sPbB.GetJointCumulant(1, 3);
+      double pbB_22 = sPbB.GetJointCumulant(2, 2);
+
+      double XB_11 = sXB.GetJointCumulant(1, 1);
+      double XB_21 = sXB.GetJointCumulant(2, 1);
+      double XB_12 = sXB.GetJointCumulant(1, 2);
+      double XB_31 = sXB.GetJointCumulant(3, 1);
+      double XB_13 = sXB.GetJointCumulant(1, 3);
+      double XB_22 = sXB.GetJointCumulant(2, 2);
+
+      SAM3HigherOrderBcan p_bcan = SAM3BcanK2K3K4(
+        varNp, k3p_gce, k4p_gce, kB2, kB3, kB4,
+        pB_11, pB_21, pB_12, pB_31, pB_13, pB_22);
+      SAM3HigherOrderBcan pb_bcan = SAM3BcanK2K3K4(
+        varNpb, k3pb_gce, k4pb_gce, kB2, kB3, kB4,
+        pbB_11, pbB_21, pbB_12, pbB_31, pbB_13, pbB_22);
+      SAM3HigherOrderBcan X_bcan = SAM3BcanK2K3K4(
+        k2X_gce, k3X_gce, k4X_gce, kB2, kB3, kB4,
+        XB_11, XB_21, XB_12, XB_31, XB_13, XB_22);
+
+      fout << setw(w) << k3p_gce    << setw(w) << k4p_gce
+           << setw(w) << k3pb_gce   << setw(w) << k4pb_gce
+           << setw(w) << p_bcan.k3  << setw(w) << p_bcan.k4
+           << setw(w) << pb_bcan.k3 << setw(w) << pb_bcan.k4
+           << setw(w) << k2X_gce    << setw(w) << k3X_gce     << setw(w) << k4X_gce
+           << setw(w) << X_bcan.k2  << setw(w) << X_bcan.k3   << setw(w) << X_bcan.k4;
+    }
+    fout << endl;
+  }
+
+  fout.close();
+}
+
+
+// ============================================================
+// Jackknife writer: block-resample the event list to estimate the
+// statistical uncertainty on each SAM-3.0 corrected cumulant, accounting
+// for correlations between the input moments (they all come from the same
+// events).
+//
+// Method: N disjoint event blocks, populated round-robin during sampling.
+// Each block gives an independent SAM-3.0 estimate θ_i.  The variance of
+// the full-sample estimator is estimated as
+//     Var(θ_full) = Σ (θ_i − θ̄)² / (N (N − 1))
+// Central values reported are from the full-sample processor (unbiased for
+// non-linear estimators).
+// ============================================================
+void WriteSAM3JackknifeFile(const string& prefix,
+                            EventsProcessorSAM3& nstats,
+                            vector<EventsProcessorSAM3>& jk_blocks) {
+  ofstream fout(prefix + ".SAM3-jackknife.dat");
+  int w = 15;
+
+  SAM3Cumulants central = ComputeSAM3Cumulants(nstats);
+  if (central.nbins == 0) {
+    fout << "# Not enough events in the full processor to compute cumulants yet." << endl;
+    return;
+  }
+  int nbins = central.nbins;
+
+  int N_blocks = (int)jk_blocks.size();
+  vector<SAM3Cumulants> block_results(N_blocks);
+  int n_good = 0;
+  for (int ib = 0; ib < N_blocks; ++ib) {
+    block_results[ib] = ComputeSAM3Cumulants(jk_blocks[ib]);
+    if (block_results[ib].nbins == nbins) ++n_good;
+  }
+
+  fout << "# SAM-3.0 cumulants with jackknife statistical errors." << endl;
+  fout << "# Error = stddev(block estimates) / sqrt(N_blocks - 1)," << endl;
+  fout << "#   i.e. Var(full) = Sigma (theta_i - theta_bar)^2 / (N (N - 1))." << endl;
+  fout << "# Events total: " << nstats.nevents
+       << "   Blocks: " << N_blocks << " (populated: " << n_good << ")" << endl;
+  fout << "# pT cuts: " << nstats.m_pTmin << " < pT < " << nstats.m_pTmax << " GeV/c" << endl;
+  fout << "# Ensembles: gce, Bcan, Qcan, Scan, BQcan, BScan, BQScan" << endl;
+  fout << "#" << endl;
+
+  if (n_good < 2) {
+    fout << "# Need at least 2 populated blocks; retry after more events." << endl;
+    return;
+  }
+
+  // Header row.
+  fout << setw(w) << "ycut"
+       << setw(w) << "<Np>"
+       << setw(w) << "<Npbar>";
+  for (int ie = 0; ie < N_SAM3_ENSEMBLES; ++ie) {
+    const string& n = SAM3EnsembleName(ie);
+    fout << setw(w) << ("k2p_" + n)   << setw(w) << ("k2p_" + n + "_e")
+         << setw(w) << ("k2pb_" + n)  << setw(w) << ("k2pb_" + n + "_e")
+         << setw(w) << ("k11_" + n)   << setw(w) << ("k11_" + n + "_e");
+  }
+  fout << setw(w) << "k3p/k1p"       << setw(w) << "k3p/k1p_e"
+       << setw(w) << "k4p/k2p"       << setw(w) << "k4p/k2p_e"
+       << setw(w) << "k3pb/k1pb"     << setw(w) << "k3pb/k1pb_e"
+       << setw(w) << "k4pb/k2pb"     << setw(w) << "k4pb/k2pb_e"
+       << setw(w) << "k2X/Skellam"   << setw(w) << "k2X/Skell_e"
+       << setw(w) << "k3X/k1X"       << setw(w) << "k3X/k1X_e"
+       << setw(w) << "k4X/k2X"       << setw(w) << "k4X/k2X_e";
+  fout << endl;
+
+  // jk_error: std.dev of the full-sample estimate from the N block estimates.
+  //   Var(full) = sample_var(block) / N_blocks
+  //             = Σ(v_i - v̄)² / (N_blocks × (N_blocks - 1)).
+  // Non-finite block values are skipped (e.g. ratios like k3/k1 where the
+  // denominator is zero in a block with zero antiprotons at small y_cut).
+  auto jk_error = [&](int ensemble, int isub, int quantity) -> double {
+    double sum = 0., sum_sq = 0.;
+    int n = 0;
+    for (int ib = 0; ib < N_blocks; ++ib) {
+      if (block_results[ib].nbins != nbins) continue;
+      double v = (quantity == 0) ? block_results[ib].k2p [ensemble][isub]
+               : (quantity == 1) ? block_results[ib].k2pb[ensemble][isub]
+                                 : block_results[ib].k11 [ensemble][isub];
+      if (!std::isfinite(v)) continue;
+      sum    += v;
+      sum_sq += v * v;
+      ++n;
+    }
+    if (n < 2) return 0.;
+    double mean = sum / n;
+    double ss   = sum_sq - n * mean * mean;
+    if (ss < 0.) ss = 0.;            // floating-point safety
+    return std::sqrt(ss / ((double)n * (double)(n - 1)));
+  };
+
+  // Same formula as jk_error, applied to an arbitrary per-bin member selected
+  // by `pick` (returns one double from a block's SAM3Cumulants).
+  auto jk_error_ratio = [&](int isub,
+                            double (*pick)(const SAM3Cumulants&, int)) -> double {
+    double sum = 0., sum_sq = 0.;
+    int n = 0;
+    for (int ib = 0; ib < N_blocks; ++ib) {
+      if (block_results[ib].nbins != nbins) continue;
+      double v = pick(block_results[ib], isub);
+      if (!std::isfinite(v)) continue;
+      sum    += v;
+      sum_sq += v * v;
+      ++n;
+    }
+    if (n < 2) return 0.;
+    double mean = sum / n;
+    double ss   = sum_sq - n * mean * mean;
+    if (ss < 0.) ss = 0.;
+    return std::sqrt(ss / ((double)n * (double)(n - 1)));
+  };
+
+  auto pick_k3k1_p    = [](const SAM3Cumulants& c, int i) { return c.r_k3k1_p   [i]; };
+  auto pick_k4k2_p    = [](const SAM3Cumulants& c, int i) { return c.r_k4k2_p   [i]; };
+  auto pick_k3k1_pb   = [](const SAM3Cumulants& c, int i) { return c.r_k3k1_pb  [i]; };
+  auto pick_k4k2_pb   = [](const SAM3Cumulants& c, int i) { return c.r_k4k2_pb  [i]; };
+  auto pick_k2X_skell = [](const SAM3Cumulants& c, int i) { return c.r_k2X_skell[i]; };
+  auto pick_k3X_k1X   = [](const SAM3Cumulants& c, int i) { return c.r_k3X_k1X  [i]; };
+  auto pick_k4X_k2X   = [](const SAM3Cumulants& c, int i) { return c.r_k4X_k2X  [i]; };
+
+  for (int isub = 0; isub < nbins; ++isub) {
+    double ycut = (isub + 1) * nstats.m_dY;
+    fout << setw(w) << ycut
+         << setw(w) << central.meanNp[isub]
+         << setw(w) << central.meanNpb[isub];
+    for (int ie = 0; ie < N_SAM3_ENSEMBLES; ++ie) {
+      fout << setw(w) << central.k2p [ie][isub] << setw(w) << jk_error(ie, isub, 0)
+           << setw(w) << central.k2pb[ie][isub] << setw(w) << jk_error(ie, isub, 1)
+           << setw(w) << central.k11 [ie][isub] << setw(w) << jk_error(ie, isub, 2);
+    }
+    fout << setw(w) << central.r_k3k1_p [isub]   << setw(w) << jk_error_ratio(isub, pick_k3k1_p  )
+         << setw(w) << central.r_k4k2_p [isub]   << setw(w) << jk_error_ratio(isub, pick_k4k2_p  )
+         << setw(w) << central.r_k3k1_pb[isub]   << setw(w) << jk_error_ratio(isub, pick_k3k1_pb )
+         << setw(w) << central.r_k4k2_pb[isub]   << setw(w) << jk_error_ratio(isub, pick_k4k2_pb )
+         << setw(w) << central.r_k2X_skell[isub] << setw(w) << jk_error_ratio(isub, pick_k2X_skell)
+         << setw(w) << central.r_k3X_k1X  [isub] << setw(w) << jk_error_ratio(isub, pick_k3X_k1X )
+         << setw(w) << central.r_k4X_k2X  [isub] << setw(w) << jk_error_ratio(isub, pick_k4X_k2X );
     fout << endl;
   }
 
@@ -517,12 +1011,13 @@ int main(int argc, char* argv[]) {
   size_t lastindex = prefix.find_last_of(".");
   prefix = prefix.substr(0, lastindex);
 
+  int Bcan = lround(run_parameters.parameters["Bcanonical"]);
+  int Qcan = lround(run_parameters.parameters["Qcanonical"]);
+  int Scan = lround(run_parameters.parameters["Scanonical"]);
+  const bool gce_mode = (!Bcan && !Qcan && !Scan);
   {
-    int Bcan = lround(run_parameters.parameters["Bcanonical"]);
-    int Qcan = lround(run_parameters.parameters["Qcanonical"]);
-    int Scan = lround(run_parameters.parameters["Scanonical"]);
     string ensemble_suffix;
-    if (!Bcan && !Qcan && !Scan)
+    if (gce_mode)
       ensemble_suffix = ".GCE";
     else {
       ensemble_suffix = ".";
@@ -585,19 +1080,29 @@ int main(int argc, char* argv[]) {
     cout << "Sampling " << run_parameters.nevents << " events..." << endl;
   cout << "pT cuts: " << pTmin << " < pT < " << pTmax << " GeV/c" << endl;
 
-  // Prepare statistics
+  // Prepare statistics: full-sample processor + N_JK jackknife blocks.
   EventsProcessorSAM3 nstats(nsubs, dY, pTmin, pTmax);
+
+  const int N_JK = 20;
+  vector<EventsProcessorSAM3> jk_blocks;
+  jk_blocks.reserve(N_JK);
+  for (int ib = 0; ib < N_JK; ++ib)
+    jk_blocks.emplace_back(nsubs, dY, pTmin, pTmax);
 
   int decays = lround(run_parameters.parameters["decays"]);
 
   // Event loop (runs indefinitely if nevents < 0)
   for (long long event_number = 0; infinite_mode || event_number < run_parameters.nevents; ++event_number) {
-    // Get primordial event (no decays yet)
+    // Get primordial event (no decays yet).
     SimpleEvent evt = evtgen->GetEvent(false);
 
-    // ProcessEvent handles decays internally:
-    // 4pi charges computed before decays, accepted p/pbar after decays
-    nstats.ProcessEvent(evt, *TPS, decays);
+    // Compute the per-event summary ONCE (does the expensive decay step),
+    // then fold into both the full processor and one jackknife block.
+    EventsProcessorSAM3::EventData ed =
+      EventsProcessorSAM3::ComputeEventData(evt, *TPS, decays, nsubs, dY, pTmin, pTmax);
+
+    nstats.AddEventData(ed);
+    jk_blocks[event_number % N_JK].AddEventData(ed);
 
     if (infinite_mode) {
       if ((event_number + 1) % 1000 == 0) {
@@ -605,24 +1110,25 @@ int main(int argc, char* argv[]) {
         cout.flush();
 
         WriteToFile(prefix, nstats);
-        WriteSAM3CorrectedFile(prefix, nstats);
+        WriteSAM3CorrectedFile(prefix, nstats, gce_mode);
+        WriteSAM3JackknifeFile(prefix, nstats, jk_blocks);
       }
     }
-    else if (run_parameters.nevents < 100
-        || (event_number + 1) % (run_parameters.nevents / 100) == 0
-        || (event_number + 1) % 1000 == 0) {
+    else if ((event_number + 1) % 100 == 0) {
       cout << (event_number + 1) << " ";
       cout.flush();
 
       WriteToFile(prefix, nstats);
-      WriteSAM3CorrectedFile(prefix, nstats);
+      WriteSAM3CorrectedFile(prefix, nstats, gce_mode);
+      WriteSAM3JackknifeFile(prefix, nstats, jk_blocks);
     }
   }
   cout << endl;
 
   // Final write
   WriteToFile(prefix, nstats);
-  WriteSAM3CorrectedFile(prefix, nstats);
+  WriteSAM3CorrectedFile(prefix, nstats, gce_mode);
+  WriteSAM3JackknifeFile(prefix, nstats, jk_blocks);
 
   // Cleanup
   delete evtgen;
