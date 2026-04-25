@@ -1239,14 +1239,22 @@ int main(int argc, char* argv[]) {
     jk_blocks[event_number % N_JK].AddEventData(ed);
 
     if (infinite_mode) {
+      // Progress dot + cheap writers every 1000 events (cumulants,
+      // corrected, NLO together cost ~80 ms — small even on slow central
+      // BQS runs).  The jackknife writer re-computes SAM-3.0 cumulants 21×
+      // (full sample plus N_JK blocks) and is the heavy one — only flush
+      // it every 100 000 events online.  The final post-loop flush always
+      // includes the jackknife.
       if ((event_number + 1) % 1000 == 0) {
         cout << (event_number + 1) << " ";
         cout.flush();
 
         WriteToFile(prefix, nstats);
         WriteSAM3CorrectedFile(prefix, nstats, gce_mode);
-        WriteSAM3JackknifeFile(prefix, nstats, jk_blocks);
         if (gce_mode) WriteSAM3NLOFile(prefix, nstats);
+      }
+      if ((event_number + 1) % 100000 == 0) {
+        WriteSAM3JackknifeFile(prefix, nstats, jk_blocks);
       }
     }
     else if ((event_number + 1) % 100 == 0) {
