@@ -367,6 +367,66 @@ static SAM3HigherOrderBcan SAM3BcanK2K3K4(
 
 
 // ============================================================
+// SAM-3.0 B-canonical κ_1 and κ_2 with the 1/⟨B⟩ next-to-leading-order
+// correction (Eqs. A6, A7 from the manuscript).  Single-charge
+// specialization for one observable Y conditioned on B = ⟨B⟩.
+//
+//   κ_1^ce(LO)     = κ_1^Y                                (saddle)
+//   κ_1^ce(LO+NLO) = κ_1^Y − κ_12^YB/(2 κ_2^B)
+//                            + κ_3^B κ_11^YB/(2 (κ_2^B)²)
+//
+//   κ_2^ce(LO)     = κ_2^Y − (κ_11^YB)²/κ_2^B             (saddle)
+//   κ_2^ce(LO+NLO) = κ_2^ce(LO) − 1/(2(κ_2^B)^4) ×
+//       [ −2 (κ_3^B)² (κ_11^YB)²
+//         + κ_2^B κ_4^B (κ_11^YB)²
+//         + 4 κ_2^B κ_3^B κ_11^YB κ_12^YB
+//         − (κ_2^B)² (κ_12^YB)²
+//         − 2 (κ_2^B)² κ_11^YB κ_13^YB
+//         − (κ_2^B)² κ_3^B κ_21^YB
+//         + (κ_2^B)³ κ_22^YB ]
+//
+// Indexing κ_{ij}^YB: i derivatives w.r.t. Y, j w.r.t. B.
+// ============================================================
+struct SAM3BcanLONLO {
+  double k1_LO, k1_LONLO;
+  double k2_LO, k2_LONLO;
+};
+
+static SAM3BcanLONLO ComputeSAM3BcanLONLO(
+    double k1Y, double k2Y,
+    double kB2, double kB3, double kB4,
+    double k11, double k12, double k13,
+    double k21, double k22)
+{
+  SAM3BcanLONLO r;
+  double kB2_2 = kB2 * kB2;
+  double kB2_3 = kB2_2 * kB2;
+  double kB2_4 = kB2_2 * kB2_2;
+
+  // κ_1: LO is unchanged, NLO from 1/⟨B⟩ corrections.
+  r.k1_LO    = k1Y;
+  r.k1_LONLO = k1Y
+             - k12 / (2.0 * kB2)
+             + kB3 * k11 / (2.0 * kB2_2);
+
+  // κ_2: LO = saddle, NLO subtracts the bracket / (2 (κ_2^B)^4).
+  double k2_corr_LO = k2Y - k11 * k11 / kB2;
+  double bracket =
+      -2.0 * kB3 * kB3 * k11 * k11
+    +  kB2 * kB4        * k11 * k11
+    +  4.0 * kB2 * kB3  * k11 * k12
+    -  kB2_2            * k12 * k12
+    -  2.0 * kB2_2      * k11 * k13
+    -  kB2_2 * kB3      * k21
+    +  kB2_3            * k22;
+
+  r.k2_LO    = k2_corr_LO;
+  r.k2_LONLO = k2_corr_LO - bracket / (2.0 * kB2_4);
+  return r;
+}
+
+
+// ============================================================
 // File writer
 // ============================================================
 void WriteToFile(const string& prefix, EventsProcessorSAM3& stats) {
@@ -832,6 +892,80 @@ void WriteSAM3CorrectedFile(const string& prefix, EventsProcessorSAM3& stats,
 
 
 // ============================================================
+// SAM-3.0 B-canonical κ_1, κ_2 with NLO (1/⟨B⟩) corrections.
+// Eqs. (A6, A7).  Computed only in GCE mode — the formulas take
+// GCE-sampled cumulants and produce the canonical-ensemble prediction
+// at next-to-leading order in the system size.
+// ============================================================
+void WriteSAM3NLOFile(const string& prefix, EventsProcessorSAM3& stats) {
+  ofstream fout(prefix + ".SAM3-NLO.dat");
+  int w = 15;
+
+  fout << "# SAM-3.0 B-canonical κ_1 and κ_2 with LO and LO+NLO corrections" << endl;
+  fout << "# Eqs. (A6, A7): saddle-point + 1/⟨B⟩ next-to-leading-order" << endl;
+  fout << "# Observables: p (N_p), pbar (N_pbar), X = N_p − N_pbar" << endl;
+  fout << "# Events: " << stats.nevents << endl;
+  fout << "# pT cuts: " << stats.m_pTmin << " < pT < " << stats.m_pTmax << " GeV/c" << endl;
+  fout << "#" << endl;
+  fout << "# κ_1^ce(LO)     = κ_1^Y" << endl;
+  fout << "# κ_1^ce(LO+NLO) = κ_1^Y − κ_12^YB/(2κ_2^B) + κ_3^B κ_11^YB/(2(κ_2^B)²)" << endl;
+  fout << "# κ_2^ce(LO)     = κ_2^Y − (κ_11^YB)²/κ_2^B" << endl;
+  fout << "# κ_2^ce(LO+NLO) = κ_2^ce(LO) − [bracket]/(2(κ_2^B)^4)" << endl;
+  fout << "#" << endl;
+
+  double kB2 = stats.statsB.GetCentralMoment(2);
+  double kB3 = stats.statsB.GetCumulant(3);
+  double kB4 = stats.statsB.GetCumulant(4);
+  fout << "# κ_2^B = " << kB2
+       << "  κ_3^B = " << kB3
+       << "  κ_4^B = " << kB4 << endl;
+  fout << "#" << endl;
+
+  // Header row — for each of {p, pbar, X} we emit 4 columns.
+  fout << setw(w) << "ycut"
+       << setw(w) << "k1p_LO"     << setw(w) << "k1p_LONLO"
+       << setw(w) << "k2p_LO"     << setw(w) << "k2p_LONLO"
+       << setw(w) << "k1pb_LO"    << setw(w) << "k1pb_LONLO"
+       << setw(w) << "k2pb_LO"    << setw(w) << "k2pb_LONLO"
+       << setw(w) << "k1X_LO"     << setw(w) << "k1X_LONLO"
+       << setw(w) << "k2X_LO"     << setw(w) << "k2X_LONLO"
+       << endl;
+
+  auto compute = [&](TwoNumberStatistics& s) {
+    double k1Y = s.GetMean1();
+    double k2Y = s.GetJointCumulant(2, 0);
+    double k11 = s.GetJointCumulant(1, 1);
+    double k12 = s.GetJointCumulant(1, 2);
+    double k13 = s.GetJointCumulant(1, 3);
+    double k21 = s.GetJointCumulant(2, 1);
+    double k22 = s.GetJointCumulant(2, 2);
+    return ComputeSAM3BcanLONLO(k1Y, k2Y, kB2, kB3, kB4,
+                                 k11, k12, k13, k21, k22);
+  };
+
+  int nbins = stats.m_nsubs / 2;
+  for (int isub = 0; isub < nbins; ++isub) {
+    double ycut = (isub + 1) * stats.m_dY;
+
+    auto p_res  = compute(stats.statsPB   [isub]);
+    auto pb_res = compute(stats.statsPbarB[isub]);
+    auto X_res  = compute(stats.statsXB   [isub]);
+
+    fout << setw(w) << ycut
+         << setw(w) << p_res .k1_LO  << setw(w) << p_res .k1_LONLO
+         << setw(w) << p_res .k2_LO  << setw(w) << p_res .k2_LONLO
+         << setw(w) << pb_res.k1_LO  << setw(w) << pb_res.k1_LONLO
+         << setw(w) << pb_res.k2_LO  << setw(w) << pb_res.k2_LONLO
+         << setw(w) << X_res .k1_LO  << setw(w) << X_res .k1_LONLO
+         << setw(w) << X_res .k2_LO  << setw(w) << X_res .k2_LONLO
+         << endl;
+  }
+
+  fout.close();
+}
+
+
+// ============================================================
 // Jackknife writer: block-resample the event list to estimate the
 // statistical uncertainty on each SAM-3.0 corrected cumulant, accounting
 // for correlations between the input moments (they all come from the same
@@ -1112,6 +1246,7 @@ int main(int argc, char* argv[]) {
         WriteToFile(prefix, nstats);
         WriteSAM3CorrectedFile(prefix, nstats, gce_mode);
         WriteSAM3JackknifeFile(prefix, nstats, jk_blocks);
+        if (gce_mode) WriteSAM3NLOFile(prefix, nstats);
       }
     }
     else if ((event_number + 1) % 100 == 0) {
@@ -1121,6 +1256,7 @@ int main(int argc, char* argv[]) {
       WriteToFile(prefix, nstats);
       WriteSAM3CorrectedFile(prefix, nstats, gce_mode);
       WriteSAM3JackknifeFile(prefix, nstats, jk_blocks);
+      if (gce_mode) WriteSAM3NLOFile(prefix, nstats);
     }
   }
   cout << endl;
@@ -1129,6 +1265,7 @@ int main(int argc, char* argv[]) {
   WriteToFile(prefix, nstats);
   WriteSAM3CorrectedFile(prefix, nstats, gce_mode);
   WriteSAM3JackknifeFile(prefix, nstats, jk_blocks);
+  if (gce_mode) WriteSAM3NLOFile(prefix, nstats);
 
   // Cleanup
   delete evtgen;
