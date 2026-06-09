@@ -5,6 +5,7 @@
 #include <ctime>
 #include <cstdio>
 #include <cassert>
+#include <limits>
 
 #include "HRGBase.h"
 #include "HRGEV.h"
@@ -185,6 +186,42 @@ inline const string& SAM3EnsembleName(int i) {
   return names[i];
 }
 
+// ============================================================
+// SAM-3.0 B-canonical κ_2, κ_3, κ_4 corrections for a single observable Y
+// at fixed B = ⟨B⟩.  Single-charge saddle-point expansion through the first
+// non-trivial 1/⟨B⟩ correction (NLO).  Used both directly to write the
+// .SAM3-corrected.dat columns and per-block by ComputeSAM3Cumulants so the
+// jackknife writer can quote uncertainties on the prediction.
+//
+//   A  = κ_{11}/κ_{02}
+//   M  = κ_{21} − 2 κ_{12} A + κ_{03} A²
+//   κ̃_2 = κ_{20} − κ_{11}²/κ_{02}
+//   κ̃_3 = κ_{30} − 3 κ_{21} A + 3 κ_{12} A² − κ_{03} A³
+//   κ̃_4 = κ_{40} − 4 κ_{31} A + 6 κ_{22} A² − 4 κ_{13} A³ + κ_{04} A⁴
+//          − 3 M²/κ_{02}
+//
+// Indexing κ_{ij}: i derivatives w.r.t. Y, j w.r.t. B.
+// ============================================================
+struct SAM3HigherOrderBcan { double k2, k3, k4; };
+
+static SAM3HigherOrderBcan SAM3BcanK2K3K4(
+    double kN2, double kN3, double kN4,
+    double kB2, double kB3, double kB4,
+    double k11, double k21, double k12,
+    double k31, double k13, double k22)
+{
+  double A  = k11 / kB2;
+  double A2 = A * A, A3 = A2 * A, A4 = A2 * A2;
+  double M  = k21 - 2.0 * k12 * A + kB3 * A2;
+  SAM3HigherOrderBcan r;
+  r.k2 = kN2 - k11 * k11 / kB2;
+  r.k3 = kN3 - 3.0 * k21 * A + 3.0 * k12 * A2 - kB3 * A3;
+  r.k4 = kN4 - 4.0 * k31 * A + 6.0 * k22 * A2 - 4.0 * k13 * A3 + kB4 * A4
+             - 3.0 * M * M / kB2;
+  return r;
+}
+
+
 struct SAM3Cumulants {
   int nbins = 0;
   vector<double> meanNp, meanNpb;               // [nbins]
@@ -195,6 +232,12 @@ struct SAM3Cumulants {
   vector<double> r_k3k1_pb, r_k4k2_pb;          // [nbins]
   // Direct-MC net-proton ratios for X = N_p − N_pbar.
   vector<double> r_k2X_skell, r_k3X_k1X, r_k4X_k2X;  // [nbins]
+  // SAM-3.0 B-canonical LO predictions for κ_3, κ_4 of p, p̄, X.
+  // Only meaningful when starting from GCE data; left as 0 (and skipped by
+  // the jackknife writer's non-finite-block filter) when κ_2^B → 0.
+  vector<double> k3p_Bcan, k4p_Bcan;            // [nbins]
+  vector<double> k3pb_Bcan, k4pb_Bcan;          // [nbins]
+  vector<double> k3X_Bcan,  k4X_Bcan;           // [nbins]
 };
 
 // Compute all SAM-3.0 corrected 2nd-order cumulants for a given processor.
@@ -217,6 +260,12 @@ static SAM3Cumulants ComputeSAM3Cumulants(EventsProcessorSAM3& stats) {
   out.r_k2X_skell.assign(nbins, 0.);
   out.r_k3X_k1X  .assign(nbins, 0.);
   out.r_k4X_k2X  .assign(nbins, 0.);
+  out.k3p_Bcan .assign(nbins, std::numeric_limits<double>::quiet_NaN());
+  out.k4p_Bcan .assign(nbins, std::numeric_limits<double>::quiet_NaN());
+  out.k3pb_Bcan.assign(nbins, std::numeric_limits<double>::quiet_NaN());
+  out.k4pb_Bcan.assign(nbins, std::numeric_limits<double>::quiet_NaN());
+  out.k3X_Bcan .assign(nbins, std::numeric_limits<double>::quiet_NaN());
+  out.k4X_Bcan .assign(nbins, std::numeric_limits<double>::quiet_NaN());
 
   double varB  = stats.statsB.GetCentralMoment(2);
   double varQ  = stats.statsQ.GetCentralMoment(2);
@@ -328,41 +377,65 @@ static SAM3Cumulants ComputeSAM3Cumulants(EventsProcessorSAM3& stats) {
     out.r_k2X_skell[isub] = (skellam > 0.) ? sXB.GetJointCumulant(2, 0) / skellam : 0.;
     out.r_k3X_k1X  [isub] = sXB.GetJointCumulantRatio(3, 0, 1, 0);
     out.r_k4X_k2X  [isub] = sXB.GetJointCumulantRatio(4, 0, 2, 0);
+
+    // SAM-3.0 B-canonical LO predictions for κ_3 and κ_4 of {p, p̄, X}.
+    // Skipped (left as NaN) when κ_2^B → 0 (i.e. when the run is itself
+    // B-canonical, where these "predictions from GCE" don't apply).  The
+    // jackknife writer filters NaN blocks via std::isfinite.
+    if (varB > 1.e-9) {
+      double kB3 = stats.statsB.GetCumulant(3);
+      double kB4 = stats.statsB.GetCumulant(4);
+
+      auto& sPB  = stats.statsPB   [isub];
+      auto& sPbB = stats.statsPbarB[isub];
+
+      // κ_3, κ_4 of N_p, N_p̄ (from joint pp̄), and of X (from statsXB).
+      double k3p  = ppbar.GetJointCumulant(3, 0);
+      double k4p  = ppbar.GetJointCumulant(4, 0);
+      double k3pb = ppbar.GetJointCumulant(0, 3);
+      double k4pb = ppbar.GetJointCumulant(0, 4);
+      double k2X  = sXB  .GetJointCumulant(2, 0);
+      double k3X  = sXB  .GetJointCumulant(3, 0);
+      double k4X  = sXB  .GetJointCumulant(4, 0);
+
+      // Joint cumulants κ_{ij}^YB needed by SAM3BcanK2K3K4.
+      double pB_11 = sPB.GetJointCumulant(1, 1);
+      double pB_21 = sPB.GetJointCumulant(2, 1);
+      double pB_12 = sPB.GetJointCumulant(1, 2);
+      double pB_31 = sPB.GetJointCumulant(3, 1);
+      double pB_13 = sPB.GetJointCumulant(1, 3);
+      double pB_22 = sPB.GetJointCumulant(2, 2);
+
+      double pbB_11 = sPbB.GetJointCumulant(1, 1);
+      double pbB_21 = sPbB.GetJointCumulant(2, 1);
+      double pbB_12 = sPbB.GetJointCumulant(1, 2);
+      double pbB_31 = sPbB.GetJointCumulant(3, 1);
+      double pbB_13 = sPbB.GetJointCumulant(1, 3);
+      double pbB_22 = sPbB.GetJointCumulant(2, 2);
+
+      double XB_11 = sXB.GetJointCumulant(1, 1);
+      double XB_21 = sXB.GetJointCumulant(2, 1);
+      double XB_12 = sXB.GetJointCumulant(1, 2);
+      double XB_31 = sXB.GetJointCumulant(3, 1);
+      double XB_13 = sXB.GetJointCumulant(1, 3);
+      double XB_22 = sXB.GetJointCumulant(2, 2);
+
+      auto p_bcan  = SAM3BcanK2K3K4(varNp,  k3p,  k4p,  varB, kB3, kB4,
+                                     pB_11,  pB_21,  pB_12,  pB_31,  pB_13,  pB_22);
+      auto pb_bcan = SAM3BcanK2K3K4(varNpb, k3pb, k4pb, varB, kB3, kB4,
+                                     pbB_11, pbB_21, pbB_12, pbB_31, pbB_13, pbB_22);
+      auto X_bcan  = SAM3BcanK2K3K4(k2X,    k3X,  k4X,  varB, kB3, kB4,
+                                     XB_11,  XB_21,  XB_12,  XB_31,  XB_13,  XB_22);
+
+      out.k3p_Bcan [isub] = p_bcan .k3;
+      out.k4p_Bcan [isub] = p_bcan .k4;
+      out.k3pb_Bcan[isub] = pb_bcan.k3;
+      out.k4pb_Bcan[isub] = pb_bcan.k4;
+      out.k3X_Bcan [isub] = X_bcan .k3;
+      out.k4X_Bcan [isub] = X_bcan .k4;
+    }
   }
   return out;
-}
-
-
-// ============================================================
-// SAM-3.0 B-canonical correction for 2nd-4th cumulants of a single
-// observable N, derived via saddle-point from the joint (N, B) CGF at
-// fixed B = <B>.  Single-charge specialization; requires κ^gce_{02}[B] ≠ 0.
-//
-//   A  = κ_{11}/κ_{02},   M = κ_{21} − 2 κ_{12} A + κ_{03} A²
-//   κ̃_2 = κ_{20} − κ_{11}²/κ_{02}
-//   κ̃_3 = κ_{30} − 3 κ_{21} A + 3 κ_{12} A² − κ_{03} A³
-//   κ̃_4 = κ_{40} − 4 κ_{31} A + 6 κ_{22} A² − 4 κ_{13} A³ + κ_{04} A⁴
-//          − 3 M²/κ_{02}
-//
-// Indexing κ_{ij}: i derivatives w.r.t. N, j w.r.t. B.
-// ============================================================
-struct SAM3HigherOrderBcan { double k2, k3, k4; };
-
-static SAM3HigherOrderBcan SAM3BcanK2K3K4(
-    double kN2, double kN3, double kN4,
-    double kB2, double kB3, double kB4,
-    double k11, double k21, double k12,
-    double k31, double k13, double k22)
-{
-  double A  = k11 / kB2;
-  double A2 = A * A, A3 = A2 * A, A4 = A2 * A2;
-  double M  = k21 - 2.0 * k12 * A + kB3 * A2;
-  SAM3HigherOrderBcan r;
-  r.k2 = kN2 - k11 * k11 / kB2;
-  r.k3 = kN3 - 3.0 * k21 * A + 3.0 * k12 * A2 - kB3 * A3;
-  r.k4 = kN4 - 4.0 * k31 * A + 6.0 * k22 * A2 - 4.0 * k13 * A3 + kB4 * A4
-             - 3.0 * M * M / kB2;
-  return r;
 }
 
 
@@ -980,7 +1053,8 @@ void WriteSAM3NLOFile(const string& prefix, EventsProcessorSAM3& stats) {
 // ============================================================
 void WriteSAM3JackknifeFile(const string& prefix,
                             EventsProcessorSAM3& nstats,
-                            vector<EventsProcessorSAM3>& jk_blocks) {
+                            vector<EventsProcessorSAM3>& jk_blocks,
+                            bool gce_mode = false) {
   ofstream fout(prefix + ".SAM3-jackknife.dat");
   int w = 15;
 
@@ -1030,6 +1104,16 @@ void WriteSAM3JackknifeFile(const string& prefix,
        << setw(w) << "k2X/Skellam"   << setw(w) << "k2X/Skell_e"
        << setw(w) << "k3X/k1X"       << setw(w) << "k3X/k1X_e"
        << setw(w) << "k4X/k2X"       << setw(w) << "k4X/k2X_e";
+  if (gce_mode) {
+    // SAM-3.0 B-canonical LO predictions for κ_3, κ_4 of p, p̄, X with
+    // jackknife errors (only meaningful starting from GCE data).
+    fout << setw(w) << "k3p_Bcan"    << setw(w) << "k3p_Bcan_e"
+         << setw(w) << "k4p_Bcan"    << setw(w) << "k4p_Bcan_e"
+         << setw(w) << "k3pb_Bcan"   << setw(w) << "k3pb_Bcan_e"
+         << setw(w) << "k4pb_Bcan"   << setw(w) << "k4pb_Bcan_e"
+         << setw(w) << "k3X_Bcan"    << setw(w) << "k3X_Bcan_e"
+         << setw(w) << "k4X_Bcan"    << setw(w) << "k4X_Bcan_e";
+  }
   fout << endl;
 
   // jk_error: std.dev of the full-sample estimate from the N block estimates.
@@ -1085,6 +1169,12 @@ void WriteSAM3JackknifeFile(const string& prefix,
   auto pick_k2X_skell = [](const SAM3Cumulants& c, int i) { return c.r_k2X_skell[i]; };
   auto pick_k3X_k1X   = [](const SAM3Cumulants& c, int i) { return c.r_k3X_k1X  [i]; };
   auto pick_k4X_k2X   = [](const SAM3Cumulants& c, int i) { return c.r_k4X_k2X  [i]; };
+  auto pick_k3p_Bcan  = [](const SAM3Cumulants& c, int i) { return c.k3p_Bcan  [i]; };
+  auto pick_k4p_Bcan  = [](const SAM3Cumulants& c, int i) { return c.k4p_Bcan  [i]; };
+  auto pick_k3pb_Bcan = [](const SAM3Cumulants& c, int i) { return c.k3pb_Bcan [i]; };
+  auto pick_k4pb_Bcan = [](const SAM3Cumulants& c, int i) { return c.k4pb_Bcan [i]; };
+  auto pick_k3X_Bcan  = [](const SAM3Cumulants& c, int i) { return c.k3X_Bcan  [i]; };
+  auto pick_k4X_Bcan  = [](const SAM3Cumulants& c, int i) { return c.k4X_Bcan  [i]; };
 
   for (int isub = 0; isub < nbins; ++isub) {
     double ycut = (isub + 1) * nstats.m_dY;
@@ -1103,6 +1193,14 @@ void WriteSAM3JackknifeFile(const string& prefix,
          << setw(w) << central.r_k2X_skell[isub] << setw(w) << jk_error_ratio(isub, pick_k2X_skell)
          << setw(w) << central.r_k3X_k1X  [isub] << setw(w) << jk_error_ratio(isub, pick_k3X_k1X )
          << setw(w) << central.r_k4X_k2X  [isub] << setw(w) << jk_error_ratio(isub, pick_k4X_k2X );
+    if (gce_mode) {
+      fout << setw(w) << central.k3p_Bcan [isub] << setw(w) << jk_error_ratio(isub, pick_k3p_Bcan )
+           << setw(w) << central.k4p_Bcan [isub] << setw(w) << jk_error_ratio(isub, pick_k4p_Bcan )
+           << setw(w) << central.k3pb_Bcan[isub] << setw(w) << jk_error_ratio(isub, pick_k3pb_Bcan)
+           << setw(w) << central.k4pb_Bcan[isub] << setw(w) << jk_error_ratio(isub, pick_k4pb_Bcan)
+           << setw(w) << central.k3X_Bcan [isub] << setw(w) << jk_error_ratio(isub, pick_k3X_Bcan )
+           << setw(w) << central.k4X_Bcan [isub] << setw(w) << jk_error_ratio(isub, pick_k4X_Bcan );
+    }
     fout << endl;
   }
 
@@ -1254,7 +1352,7 @@ int main(int argc, char* argv[]) {
         if (gce_mode) WriteSAM3NLOFile(prefix, nstats);
       }
       if ((event_number + 1) % 100000 == 0) {
-        WriteSAM3JackknifeFile(prefix, nstats, jk_blocks);
+        WriteSAM3JackknifeFile(prefix, nstats, jk_blocks, gce_mode);
       }
     }
     else if ((event_number + 1) % 100 == 0) {
@@ -1263,7 +1361,7 @@ int main(int argc, char* argv[]) {
 
       WriteToFile(prefix, nstats);
       WriteSAM3CorrectedFile(prefix, nstats, gce_mode);
-      WriteSAM3JackknifeFile(prefix, nstats, jk_blocks);
+      WriteSAM3JackknifeFile(prefix, nstats, jk_blocks, gce_mode);
       if (gce_mode) WriteSAM3NLOFile(prefix, nstats);
     }
   }
@@ -1272,7 +1370,7 @@ int main(int argc, char* argv[]) {
   // Final write
   WriteToFile(prefix, nstats);
   WriteSAM3CorrectedFile(prefix, nstats, gce_mode);
-  WriteSAM3JackknifeFile(prefix, nstats, jk_blocks);
+  WriteSAM3JackknifeFile(prefix, nstats, jk_blocks, gce_mode);
   if (gce_mode) WriteSAM3NLOFile(prefix, nstats);
 
   // Cleanup
